@@ -264,7 +264,7 @@ const Calculator = {
         if (item.conditional && item.amount <= 0) continue;
         breakdownHTML += `<div class="result-item">
           <span class="result-item-label">${item.label}</span>
-          <span class="result-item-amount">${PricingEngine.formatCurrency(item.amount)}</span>
+          <span class="result-item-amount">${item.unit ? item.amount.toLocaleString('th-TH', {maximumFractionDigits: 2}) + ' ' + item.unit : (item.text ? item.text : PricingEngine.formatCurrency(item.amount))}</span>
         </div>`;
       }
     }
