@@ -72,7 +72,9 @@ const QuotationPrinter = {
       screen: 'ซิลค์สกรีน',
       digitalOffset: 'ดิจิทัล Offset',
       industrialOffset: 'Offset อุตสาหกรรม',
-      inkjet: 'อิงค์เจ็ท'
+      inkjet: 'อิงค์เจ็ท',
+      paperCalc: 'คำนวณราคากระดาษ',
+      pressSheet: 'คำนวณใบพิมพ์'
     };
 
     // Map product type keys to Thai names
@@ -90,7 +92,15 @@ const QuotationPrinter = {
       vinylSign: 'ป้ายไวนิล',
       largeSticker: 'สติกเกอร์ขนาดใหญ่',
       banner: 'แบนเนอร์',
-      poster: 'โปสเตอร์'
+      poster: 'โปสเตอร์',
+      woodfree: 'กระดาษปอนด์',
+      artPaper: 'อาร์ตมัน/ด้าน',
+      artBoard: 'อาร์ตการ์ด',
+      ivoryBoard: 'อาร์ตการ์ด 1 หน้า',
+      greyBack: 'กล่องแป้งหลังเทา',
+      kraft: 'คราฟท์',
+      cardWhite: 'กระดาษการ์ดขาว',
+      general: 'คำนวณใบพิมพ์ทั่วไป'
     };
 
     const systemName = systemNames[result.system] || result.system;
@@ -121,9 +131,18 @@ const QuotationPrinter = {
       for (var i = 0; i < result.costBreakdown.length; i++) {
         var item = result.costBreakdown[i];
         if (item.conditional && item.amount <= 0) continue;
+        // Display with correct unit: text > unit > currency
+        var displayValue = '';
+        if (item.text) {
+          displayValue = item.text;
+        } else if (item.unit) {
+          displayValue = item.amount.toLocaleString('th-TH', {maximumFractionDigits: 2}) + ' ' + item.unit;
+        } else {
+          displayValue = formatCurrency(item.amount);
+        }
         costRows += '<tr><td style="padding: 6px 8px; border-bottom: 1px solid #eee;">' +
           item.label + '</td><td style="padding: 6px 8px; border-bottom: 1px solid #eee; text-align: right;">' +
-          formatCurrency(item.amount) + '</td></tr>';
+          displayValue + '</td></tr>';
       }
     }
 
@@ -172,7 +191,7 @@ const QuotationPrinter = {
       '<tr><th>จำนวน</th><td>' + quantityStr + '</td></tr>' +
       '</table>' +
       '<table class="cost-table">' +
-      '<thead><tr><th style="width: 60%;">รายการ</th><th style="width: 40%; text-align: right;">จำนวนเงิน</th></tr></thead>' +
+      '<thead><tr><th style="width: 60%;">รายการ</th><th style="width: 40%; text-align: right;">ข้อมูล</th></tr></thead>' +
       '<tbody>' +
       costRows +
       '<tr class="total-row"><td style="padding: 8px; border-top: 2px solid #333;">ราคารวม</td><td style="padding: 8px; border-top: 2px solid #333; text-align: right;">' + formatCurrency(result.totalPrice) + '</td></tr>' +
