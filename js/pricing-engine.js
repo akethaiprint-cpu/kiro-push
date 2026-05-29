@@ -5,6 +5,26 @@
  */
 const PricingEngine = {
   /**
+   * Press machine specifications — ขนาดรับกระดาษและค่าเพลท
+   * Used by calculatePressSheet to validate paper fit and compute plate cost.
+   * @typedef {object} MachineSpec
+   * @property {string} name - Display name
+   * @property {number} maxWidth - Max paper width in cm
+   * @property {number} maxHeight - Max paper height in cm
+   * @property {number} plateCostPerColor - Plate cost per color in baht
+   * @property {string} [hint] - Optional hint shown when paper doesn't fit
+   */
+  MACHINE_SPECS: {
+    'heidelberg_gto46': { name: 'Heidelberg GTO 46',           maxWidth: 46,  maxHeight: 34, plateCostPerColor: 200, hint: 'เครื่องเล็ก รับกระดาษไม่เกิน 46×34 ซม.' },
+    'heidelberg_mo':    { name: 'Heidelberg MO (MOZ/MOV)',     maxWidth: 48,  maxHeight: 65, plateCostPerColor: 300, hint: 'ต้องตัด 4 ก่อน หรือใช้กระดาษ 19×25 นิ้ว' },
+    'heidelberg_movp':  { name: 'Heidelberg MOVP (Perfector)', maxWidth: 48,  maxHeight: 65, plateCostPerColor: 300, hint: 'พิมพ์ 2 ด้านรอบเดียว — ต้องตัดให้พอดีก่อน' },
+    'heidelberg_sm52':  { name: 'Heidelberg SM52',             maxWidth: 52,  maxHeight: 37, plateCostPerColor: 250, hint: 'ต้องตัดกระดาษให้ไม่เกิน 52×37 ซม.' },
+    'heidelberg_sm74':  { name: 'Heidelberg SM74',             maxWidth: 74,  maxHeight: 52, plateCostPerColor: 500, hint: 'รับสูงสุด 74×52 ซม.' },
+    'heidelberg_cd102': { name: 'Heidelberg CD102 / XL102',    maxWidth: 102, maxHeight: 72, plateCostPerColor: 600, hint: 'เพลทตัด 2 รับสูงสุด 102×72 ซม.' },
+    'komori_s40':       { name: 'Komori Lithrone S40',         maxWidth: 106, maxHeight: 75, plateCostPerColor: 700, hint: 'รับสูงสุด 106×75 ซม.' },
+  },
+
+  /**
    * Main entry point — routes to the correct strategy based on system
    * @param {string} system - Printing system identifier
    * @param {string} productType - Product type identifier
@@ -688,14 +708,14 @@ const PricingEngine = {
 
   /**
    * Press Sheet calculation — คำนวณใบพิมพ์
-   * คำนวณจำนวนชิ้นต่อแผ่น, ใบพิมพ์ขั้นต่ำ, spoilage, ใบพิมพ์รวม
+   * คำนวณจำนวนชิ้นต่อใบพิมพ์, ใบพิมพ์ขั้นต่ำ, spoilage, ใบพิมพ์รวม, ต้นทุนกระดาษ, ค่าเพลท, ราคารวม
    * @param {string} productType - Ignored (single product type)
-   * @param {object} specs - { size: {width, height}, sheetSize, quantity, colorCount, jobType, printMethod }
+   * @param {object} specs - { size: {width, height}, sheetSize, quantity, colorCount, jobType, printMethod, paperType, gsm, pressType }
    * @param {object} priceTable - Full price table (unused for this calculation)
    * @returns {CalculationResult}
    */
   calculatePressSheet(productType, specs, priceTable) {
-    const { size, sheetSize, quantity, colorCount, jobType, printMethod } = specs;
+    const { size, sheetSize, quantity, colorCount, jobType, printMethod, paperType, gsm, pressType } = specs;
 
     if (!size || !size.width || !size.height) {
       return this._errorResult('pressSheet', productType, specs, 'กรุณาระบุขนาดชิ้นงาน');
@@ -705,6 +725,15 @@ const PricingEngine = {
     }
     if (!quantity || quantity <= 0) {
       return this._errorResult('pressSheet', productType, specs, 'กรุณาระบุจำนวนพิมพ์');
+    }
+    if (!paperType) {
+      return this._errorResult('pressSheet', productType, specs, 'กรุณาเลือกชนิดกระดาษ');
+    }
+    if (!gsm) {
+      return this._errorResult('pressSheet', productType, specs, 'กรุณาเลือกแกรมกระดาษ');
+    }
+    if (!pressType) {
+      return this._errorResult('pressSheet', productType, specs, 'กรุณาเลือกเครื่องพิมพ์');
     }
 
     // Sheet sizes in cm
@@ -717,6 +746,28 @@ const PricingEngine = {
     const sheet = sheetSizes[sheetSize];
     if (!sheet) {
       return this._errorResult('pressSheet', productType, specs, 'ไม่พบขนาดกระดาษที่เลือก');
+    }
+
+    // Press machine specs (ขนาดรับกระดาษ + ค่าเพลทต่อสี)
+    // hint: คำแนะนำเมื่อใส่ไม่ได้
+    const press = PricingEngine.MACHINE_SPECS[pressType];
+    if (!press) {
+      return this._errorResult('pressSheet', productType, specs, 'ไม่พบเครื่องพิมพ์ที่เลือก');
+    }
+
+    // Check if paper fits the press (check both orientations)
+    const fitsNormal = (sheet.width <= press.maxWidth && sheet.height <= press.maxHeight);
+    const fitsRotated = (sheet.height <= press.maxWidth && sheet.width <= press.maxHeight);
+    if (!fitsNormal && !fitsRotated) {
+      const hint = press.hint ? ' — ' + press.hint : '';
+      return this._errorResult('pressSheet', productType, specs,
+        '⚠️ กระดาษ ' + sheet.name + ' (' + sheet.width.toFixed(1) + '×' + sheet.height.toFixed(1) + ' ซม.) ไม่สามารถใช้กับ ' + press.name + ' ได้' + hint);
+    }
+
+    // Look up paper price per kg using existing paper price table
+    const paperInfo = this.getPaperPricePerKg(paperType, Number(gsm));
+    if (!paperInfo) {
+      return this._errorResult('pressSheet', productType, specs, 'ไม่พบราคากระดาษสำหรับ ' + paperType + ' ' + gsm + ' แกรม');
     }
 
     // Printable area (deduct Gripper 1.2 cm and Side Lay 0.7 cm)
@@ -754,30 +805,53 @@ const PricingEngine = {
     const totalSheets = Math.ceil(minSheets * (1 + spoilageRate));
     const spoilageSheets = totalSheets - minSheets;
 
+    // Plate cost = ค่าเพลทต่อสี × จำนวนสี × (Sheetwise=2, อื่นๆ=1)
+    const colors = colorCount || 1;
+    const method = printMethod || 'single';
+    const plateSets = (method === 'sheetwise') ? 2 : 1;
+    const plateCost = press.plateCostPerColor * colors * plateSets;
+
+    // Paper cost calculation
+    // น้ำหนักต่อใบ (กรัม) = (กว้าง × ยาว × แกรม) ÷ 10,000
+    const weightPerSheetGrams = (sheet.width * sheet.height * Number(gsm)) / 10000;
+    // น้ำหนักรวม (กก.) = น้ำหนักต่อใบ × ใบพิมพ์รวม ÷ 1000
+    const totalWeightKg = (weightPerSheetGrams * totalSheets) / 1000;
+    // ต้นทุนกระดาษ = น้ำหนักรวม × ราคา/กก.
+    const paperCost = totalWeightKg * paperInfo.pricePerKg;
+    // ราคาขายกระดาษ +20%
+    const paperSellingPrice = paperCost * 1.20;
+
+    // ราคารวมทั้งหมด = ค่าเพลท + ราคาขายกระดาษ
+    const totalAmount = plateCost + paperSellingPrice;
+
     // Print method notes
     let methodNote = '';
-    const method = printMethod || 'single';
     if (method === 'work-and-turn' || method === 'work-and-tumble') {
       methodNote = 'พิมพ์ 2 ด้านในรอบเดียว ใช้เพลท 1 ชุด (' + (method === 'work-and-turn' ? 'Work-and-Turn' : 'Work-and-Tumble') + ')';
     } else if (method === 'sheetwise') {
       methodNote = 'พิมพ์ 2 รอบ ใช้เพลท 2 ชุด (Sheetwise)';
     }
 
-    // Build cost breakdown (informational, no monetary cost)
+    // Build cost breakdown (ordered as specified)
     const costBreakdown = [
       { label: 'ขนาดกระดาษ', amount: 0, conditional: false, text: sheet.name + ' (' + sheet.width.toFixed(1) + '×' + sheet.height.toFixed(1) + ' ซม.)' },
+      { label: 'เครื่องพิมพ์', amount: 0, conditional: false, text: press.name + ' (รับสูงสุด ' + press.maxWidth + '×' + press.maxHeight + ' ซม.)' },
+      { label: 'ชนิดกระดาษ', amount: 0, conditional: false, text: paperInfo.name + ' — ' + paperInfo.pricePerKg.toFixed(2) + ' บาท/กก.' },
       { label: 'พื้นที่พิมพ์ได้', amount: 0, conditional: false, text: printableWidth.toFixed(1) + '×' + printableHeight.toFixed(1) + ' ซม.' },
       { label: 'ขนาดชิ้นงาน (รวม bleed)', amount: 0, conditional: false, text: pieceWidth.toFixed(1) + '×' + pieceHeight.toFixed(1) + ' ซม.' },
-      { label: 'จำนวนชิ้นต่อแผ่น', amount: piecesPerSheet, conditional: false, unit: 'ชิ้น' },
+      { label: 'ชิ้น/ใบพิมพ์', amount: piecesPerSheet, conditional: false, unit: 'ชิ้น' },
       { label: 'จำนวนพิมพ์', amount: quantity, conditional: false, unit: 'ชิ้น' },
-      { label: 'ใบพิมพ์ขั้นต่ำ', amount: minSheets, conditional: false, unit: 'แผ่น' },
-      { label: 'กระดาษเสีย (Spoilage ' + (spoilageRate * 100) + '%)', amount: spoilageSheets, conditional: false, unit: 'แผ่น' },
-      { label: 'ใบพิมพ์รวม', amount: totalSheets, conditional: false, unit: 'แผ่น' },
+      { label: 'ใบพิมพ์ขั้นต่ำ', amount: minSheets, conditional: false, unit: 'ใบพิมพ์' },
+      { label: 'กระดาษเสีย (Spoilage ' + (spoilageRate * 100).toFixed(0) + '%)', amount: spoilageSheets, conditional: false, unit: 'ใบพิมพ์' },
+      { label: 'ใบพิมพ์รวม', amount: totalSheets, conditional: false, unit: 'ใบพิมพ์' },
+      { label: 'น้ำหนักต่อใบพิมพ์', amount: weightPerSheetGrams, conditional: false, unit: 'กรัม' },
+      { label: 'น้ำหนักรวม', amount: totalWeightKg, conditional: false, unit: 'กก.' },
+      { label: 'จำนวนสี', amount: colors, conditional: false, unit: 'สี' },
+      { label: 'ค่าเพลท (' + press.plateCostPerColor + ' × ' + colors + ' สี × ' + plateSets + ' ชุด)', amount: plateCost, conditional: false },
+      { label: 'ต้นทุนกระดาษ', amount: paperCost, conditional: false },
+      { label: 'ราคาขายกระดาษ (+20%)', amount: paperSellingPrice, conditional: false },
+      { label: 'ราคารวมทั้งหมด', amount: totalAmount, conditional: false },
     ];
-
-    if (colorCount) {
-      costBreakdown.push({ label: 'จำนวนสี', amount: colorCount, conditional: false, unit: 'สี' });
-    }
 
     if (methodNote) {
       costBreakdown.push({ label: 'หมายเหตุวิธีพิมพ์', amount: 0, conditional: false, text: methodNote });
@@ -788,9 +862,19 @@ const PricingEngine = {
       system: 'pressSheet',
       productType: productType,
       costBreakdown: costBreakdown,
-      totalPrice: totalSheets,
+      totalPrice: totalAmount,
       unitPrice: piecesPerSheet,
       quantity: quantity,
+      // Extra summary fields for UI
+      summary: {
+        totalSheets: totalSheets,
+        minSheets: minSheets,
+        spoilageSheets: spoilageSheets,
+        piecesPerSheet: piecesPerSheet,
+        plateCost: plateCost,
+        paperCost: paperCost,
+        paperSellingPrice: paperSellingPrice,
+      },
       error: null
     };
   },

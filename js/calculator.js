@@ -127,6 +127,13 @@ const Calculator = {
           this.handleQuantityChange(e.target.value);
         }
       });
+
+      // pressSheet: cascade gsm options when paperType changes
+      formSection.addEventListener('change', (e) => {
+        if (e.target && e.target.id === 'inputPaperType' && this.currentSystem === 'pressSheet') {
+          this._updatePressSheetGsmOptions(e.target.value);
+        }
+      });
     }
 
     // Restore session state
@@ -275,15 +282,22 @@ const Calculator = {
 
     // Build total HTML with unit price
     if (result.system === 'pressSheet') {
-      // Press sheet calculator shows sheets, not monetary values
+      // Press sheet: totalPrice is the combined cost in baht; show summary fields below
+      const summary = result.summary || {};
+      const totalSheets = (summary.totalSheets !== undefined) ? summary.totalSheets : result.totalPrice;
+      const piecesPerSheet = (summary.piecesPerSheet !== undefined) ? summary.piecesPerSheet : result.unitPrice;
       totalEl.innerHTML = `
       <div class="result-total-row">
-        <span class="result-total-label">ใบพิมพ์รวม (รวม Spoilage)</span>
-        <span class="result-total-amount">${result.totalPrice.toLocaleString()} แผ่น</span>
+        <span class="result-total-label">ราคารวมทั้งหมด</span>
+        <span class="result-total-amount">${PricingEngine.formatCurrency(result.totalPrice)}</span>
       </div>
       <div class="result-unit-row">
-        <span class="result-unit-label">ชิ้นต่อแผ่น</span>
-        <span class="result-unit-amount">${result.unitPrice.toLocaleString()} ชิ้น/แผ่น</span>
+        <span class="result-unit-label">ใบพิมพ์รวม (รวม Spoilage)</span>
+        <span class="result-unit-amount">${totalSheets.toLocaleString()} ใบพิมพ์</span>
+      </div>
+      <div class="result-unit-row">
+        <span class="result-unit-label">ชิ้นต่อใบพิมพ์</span>
+        <span class="result-unit-amount">${piecesPerSheet.toLocaleString()} ชิ้น/ใบพิมพ์</span>
       </div>`;
     } else {
       totalEl.innerHTML = `
@@ -341,8 +355,16 @@ const Calculator = {
         return;
       }
     } else if (this.currentSystem === 'pressSheet') {
-      if (!inputData.width || !inputData.height || !inputData.sheetSize || !inputData.quantity) {
-        this.renderError([{ field: 'form', message: 'กรุณากรอกข้อมูลให้ครบ (ขนาดชิ้นงาน, ขนาดกระดาษ, จำนวนพิมพ์)' }]);
+      const missing = [];
+      if (!inputData.width || !inputData.height) missing.push('ขนาดชิ้นงาน');
+      if (!inputData.sheetSize) missing.push('ขนาดกระดาษ');
+      if (!inputData.paperType) missing.push('ชนิดกระดาษ');
+      if (!inputData.gsm) missing.push('แกรม');
+      if (!inputData.pressType) missing.push('เครื่องพิมพ์');
+      if (!inputData.quantity) missing.push('จำนวนพิมพ์');
+      if (!inputData.colorCount) missing.push('จำนวนสี');
+      if (missing.length > 0) {
+        this.renderError([{ field: 'form', message: 'กรุณากรอกข้อมูลให้ครบ (' + missing.join(', ') + ')' }]);
         return;
       }
     } else {
@@ -840,9 +862,39 @@ const Calculator = {
   },
 
   /**
+   * GSM options per paper type — used by pressSheet form
+   */
+  PRESS_SHEET_GSM_OPTIONS: {
+    woodfree:   [60, 70, 80, 100, 120],
+    artPaper:   [80, 85, 90, 100, 105, 113, 120, 128, 157],
+    artBoard:   [190, 210, 230, 260, 300, 310, 350, 360, 400, 420],
+    ivoryBoard: [190, 210, 230, 250, 270, 300, 350],
+    greyBack:   [250, 270, 300, 350, 400, 450],
+    kraft:      [50, 60, 75, 117, 140, 170],
+    cardWhite:  [150, 180, 210, 230, 250],
+  },
+
+  /**
+   * Paper type labels for pressSheet form
+   */
+  PRESS_SHEET_PAPER_TYPES: [
+    { key: 'woodfree',   name: 'ปอนด์ (Woodfree)' },
+    { key: 'artPaper',   name: 'อาร์ตมัน/ด้าน (Art Paper)' },
+    { key: 'artBoard',   name: 'อาร์ตการ์ด 2 หน้า (Art Board)' },
+    { key: 'ivoryBoard', name: 'อาร์ตการ์ด 1 หน้า (Ivory)' },
+    { key: 'greyBack',   name: 'กล่องแป้งหลังเทา' },
+    { key: 'kraft',      name: 'คราฟท์' },
+    { key: 'cardWhite',  name: 'กระดาษการ์ดขาว' },
+  ],
+
+  /**
    * Render press sheet calculator form fields (ระบบคำนวณใบพิมพ์)
    */
   _getPressSheetFields() {
+    const paperTypeOpts = this.PRESS_SHEET_PAPER_TYPES.map(p =>
+      `<option value="${p.key}">${p.name}</option>`
+    ).join('');
+
     return `
       <div class="form-group form-group-row">
         <div class="form-field">
@@ -861,6 +913,36 @@ const Calculator = {
             <option value="31x43">31 × 43 นิ้ว (78.74×109.22 ซม.)</option>
             <option value="25x36">25 × 36 นิ้ว (63.50×91.44 ซม.)</option>
             <option value="24x35">24 × 35 นิ้ว (60.96×88.90 ซม.)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group form-group-row">
+        <div class="form-field">
+          <label for="inputPaperType">ชนิดกระดาษ</label>
+          <select id="inputPaperType" name="paperType" required>
+            <option value="">— เลือกชนิดกระดาษ —</option>
+            ${paperTypeOpts}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="inputGsm">แกรม</label>
+          <select id="inputGsm" name="gsm" required disabled>
+            <option value="">— เลือกชนิดกระดาษก่อน —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-field">
+          <label for="inputPressType">เครื่องพิมพ์</label>
+          <select id="inputPressType" name="pressType" required>
+            <option value="">— เลือกเครื่องพิมพ์ —</option>
+            <option value="heidelberg_gto46">Heidelberg GTO 46 (รับ 46×34 ซม., เพลท 200 บาท/สี)</option>
+            <option value="heidelberg_mo">Heidelberg MO / MOZ / MOV (รับ 48×65 ซม., เพลท 300 บาท/สี)</option>
+            <option value="heidelberg_movp">Heidelberg MOVP — Perfector (รับ 48×65 ซม., เพลท 300 บาท/สี, 2 ด้านรอบเดียว)</option>
+            <option value="heidelberg_sm52">Heidelberg SM52 (รับ 52×37 ซม., เพลท 250 บาท/สี)</option>
+            <option value="heidelberg_sm74">Heidelberg SM74 (รับ 74×52 ซม., เพลท 500 บาท/สี)</option>
+            <option value="heidelberg_cd102">Heidelberg CD102 / XL102 (รับ 102×72 ซม., เพลท 600 บาท/สี)</option>
+            <option value="komori_s40">Komori Lithrone S40 (รับ 106×75 ซม., เพลท 700 บาท/สี)</option>
           </select>
         </div>
       </div>
@@ -897,6 +979,25 @@ const Calculator = {
           </select>
         </div>
       </div>`;
+  },
+
+  /**
+   * Update GSM dropdown when paper type changes (pressSheet form)
+   */
+  _updatePressSheetGsmOptions(paperType) {
+    const gsmEl = document.getElementById('inputGsm');
+    if (!gsmEl) return;
+
+    const gsms = this.PRESS_SHEET_GSM_OPTIONS[paperType];
+    if (!gsms || gsms.length === 0) {
+      gsmEl.innerHTML = '<option value="">— เลือกชนิดกระดาษก่อน —</option>';
+      gsmEl.disabled = true;
+      return;
+    }
+
+    const opts = gsms.map(g => `<option value="${g}">${g} แกรม</option>`).join('');
+    gsmEl.innerHTML = '<option value="">— เลือกแกรม —</option>' + opts;
+    gsmEl.disabled = false;
   },
 
   /**
@@ -1013,6 +1114,10 @@ const Calculator = {
     if (jobTypeEl) data.jobType = jobTypeEl.value;
     const printMethodEl = document.getElementById('inputPrintMethod');
     if (printMethodEl) data.printMethod = printMethodEl.value;
+    const paperTypeEl = document.getElementById('inputPaperType');
+    if (paperTypeEl) data.paperType = paperTypeEl.value;
+    const pressTypeEl = document.getElementById('inputPressType');
+    if (pressTypeEl) data.pressType = pressTypeEl.value;
 
     // Finishing options (checkboxes)
     const finishingCheckboxes = document.querySelectorAll('input[name="finishing"]:checked');
@@ -1108,6 +1213,8 @@ const Calculator = {
     // Press sheet calculator fields
     if (inputData.jobType) specs.jobType = inputData.jobType;
     if (inputData.printMethod) specs.printMethod = inputData.printMethod;
+    if (inputData.paperType) specs.paperType = inputData.paperType;
+    if (inputData.pressType) specs.pressType = inputData.pressType;
 
     return specs;
   },
