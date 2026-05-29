@@ -325,6 +325,16 @@ const Calculator = {
         return;
       }
     } else {
+      // Auto-fill width/height from standard size before validation
+      if (inputData.standardSize && (!inputData.width || !inputData.height)) {
+        const stdSizes = { 'A5': { w: '14.8', h: '21' }, 'A4': { w: '21', h: '29.7' }, 'A3': { w: '29.7', h: '42' } };
+        const std = stdSizes[inputData.standardSize];
+        if (std) {
+          inputData.width = std.w;
+          inputData.height = std.h;
+        }
+      }
+
       // Validate
       const validation = Validator.validate(this.currentSystem, this.currentProduct, inputData);
       if (!validation.valid) {
@@ -932,6 +942,20 @@ const Calculator = {
     if (inputData.width) specs.size.width = Number(inputData.width);
     if (inputData.height) specs.size.height = Number(inputData.height);
     if (inputData.depth) specs.size.depth = Number(inputData.depth);
+
+    // Standard size auto-fill (A5, A4, A3) — ถ้าเลือกขนาดมาตรฐานแล้วไม่ได้กรอก width/height
+    if (inputData.standardSize && (!specs.size.width || !specs.size.height)) {
+      const standardSizes = {
+        'A5': { width: 14.8, height: 21.0 },
+        'A4': { width: 21.0, height: 29.7 },
+        'A3': { width: 29.7, height: 42.0 },
+      };
+      const std = standardSizes[inputData.standardSize];
+      if (std) {
+        specs.size.width = std.width;
+        specs.size.height = std.height;
+      }
+    }
 
     // For business card with fixed size, parse the size string (e.g., "9.0x5.5")
     if (inputData.size && this.currentProduct === 'businessCard') {
