@@ -71,7 +71,6 @@ const PricingEngine = {
       return this._errorResult('screen', productType, specs, 'ไม่พบข้อมูลราคาสำหรับจำนวนที่เลือก');
     }
     const printSides = specs.printSides || 1;
-    const printMethod = specs.printMethod || 'single';
     // Work-and-Turn / Work-and-Tumble: พิมพ์ 2 ด้านแต่ใช้เพลท 1 ชุด ค่าพิมพ์ 1 รอบ
     // Sheetwise: พิมพ์ 2 ด้าน ใช้เพลท 2 ชุด ค่าพิมพ์ 2 รอบ
     const printMultiplier = (printMethod === 'sheetwise') ? 2 : (printSides === 2 ? 1 : 1);
