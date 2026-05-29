@@ -133,6 +133,14 @@ const Validator = {
       kraft: { size: { fixed: true }, quantity: { min: 1, max: 100000 }, requiredFields: ['quantity'] },
       cardWhite: { size: { fixed: true }, quantity: { min: 1, max: 100000 }, requiredFields: ['quantity'] },
     },
+    pressSheet: {
+      general: {
+        size: { min: 1, max: 100 },
+        colorCount: { min: 1, max: 4 },
+        quantity: { min: 1, max: 1000000 },
+        requiredFields: ['width', 'height', 'quantity', 'colorCount'],
+      },
+    },
   },
 
   /**

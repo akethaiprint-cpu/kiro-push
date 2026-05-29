@@ -49,6 +49,9 @@ const Calculator = {
       { key: 'kraft', name: 'คราฟท์' },
       { key: 'cardWhite', name: 'กระดาษการ์ดขาว' },
     ],
+    pressSheet: [
+      { key: 'general', name: 'คำนวณใบพิมพ์ทั่วไป' },
+    ],
   },
 
   /**
@@ -215,7 +218,7 @@ const Calculator = {
     formFields.innerHTML = '';
 
     // Paper calculator doesn't use Validator constraints
-    if (system === 'paperCalc') {
+    if (system === 'paperCalc' || system === 'pressSheet') {
       const fields = this._getFormFields(system, product, {}, null);
       formFields.innerHTML = fields;
       formSection.classList.remove('hidden');
@@ -271,7 +274,19 @@ const Calculator = {
     breakdownEl.innerHTML = breakdownHTML;
 
     // Build total HTML with unit price
-    totalEl.innerHTML = `
+    if (result.system === 'pressSheet') {
+      // Press sheet calculator shows sheets, not monetary values
+      totalEl.innerHTML = `
+      <div class="result-total-row">
+        <span class="result-total-label">ใบพิมพ์รวม (รวม Spoilage)</span>
+        <span class="result-total-amount">${result.totalPrice.toLocaleString()} แผ่น</span>
+      </div>
+      <div class="result-unit-row">
+        <span class="result-unit-label">ชิ้นต่อแผ่น</span>
+        <span class="result-unit-amount">${result.unitPrice.toLocaleString()} ชิ้น/แผ่น</span>
+      </div>`;
+    } else {
+      totalEl.innerHTML = `
       <div class="result-total-row">
         <span class="result-total-label">ราคารวม</span>
         <span class="result-total-amount">${PricingEngine.formatCurrency(result.totalPrice)}</span>
@@ -280,6 +295,7 @@ const Calculator = {
         <span class="result-unit-label">ราคาต่อหน่วย (${result.quantity.toLocaleString()} ชิ้น)</span>
         <span class="result-unit-amount">${PricingEngine.formatCurrency(result.unitPrice)}</span>
       </div>`;
+    }
 
     // Show result section, hide errors
     this._showSection('resultSection');
@@ -322,6 +338,11 @@ const Calculator = {
     if (this.currentSystem === 'paperCalc') {
       if (!inputData.gsm || !inputData.sheetSize || !inputData.quantity) {
         this.renderError([{ field: 'form', message: 'กรุณากรอกข้อมูลให้ครบ (แกรม, ขนาดแผ่น, จำนวน)' }]);
+        return;
+      }
+    } else if (this.currentSystem === 'pressSheet') {
+      if (!inputData.width || !inputData.height || !inputData.sheetSize || !inputData.quantity) {
+        this.renderError([{ field: 'form', message: 'กรุณากรอกข้อมูลให้ครบ (ขนาดชิ้นงาน, ขนาดกระดาษ, จำนวนพิมพ์)' }]);
         return;
       }
     } else {
@@ -464,6 +485,11 @@ const Calculator = {
     // --- Paper Calculator (special system) ---
     if (system === 'paperCalc') {
       return this._getPaperCalcFields(product);
+    }
+
+    // --- Press Sheet Calculator (special system) ---
+    if (system === 'pressSheet') {
+      return this._getPressSheetFields();
     }
 
     // --- Size fields ---
@@ -814,6 +840,66 @@ const Calculator = {
   },
 
   /**
+   * Render press sheet calculator form fields (ระบบคำนวณใบพิมพ์)
+   */
+  _getPressSheetFields() {
+    return `
+      <div class="form-group form-group-row">
+        <div class="form-field">
+          <label for="inputWidth">กว้างชิ้นงาน (ซม.)</label>
+          <input type="number" id="inputWidth" name="width" min="1" max="100" step="0.1" placeholder="กว้าง ซม." required>
+        </div>
+        <div class="form-field">
+          <label for="inputHeight">ยาวชิ้นงาน (ซม.)</label>
+          <input type="number" id="inputHeight" name="height" min="1" max="100" step="0.1" placeholder="ยาว ซม." required>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-field">
+          <label for="inputSheetSize">ขนาดกระดาษ</label>
+          <select id="inputSheetSize" name="sheetSize" required>
+            <option value="31x43">31 × 43 นิ้ว (78.74×109.22 ซม.)</option>
+            <option value="25x36">25 × 36 นิ้ว (63.50×91.44 ซม.)</option>
+            <option value="24x35">24 × 35 นิ้ว (60.96×88.90 ซม.)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-field">
+          <label for="inputQuantity">จำนวนพิมพ์ (ชิ้น)</label>
+          <input type="number" id="inputQuantity" name="quantity" min="1" step="1" placeholder="จำนวนชิ้นที่ต้องการ" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-field">
+          <label for="inputColorCount">จำนวนสี (1–4)</label>
+          <input type="number" id="inputColorCount" name="colorCount" min="1" max="4" step="1" placeholder="1–4 สี" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-field">
+          <label for="inputJobType">ประเภทงาน (สำหรับคำนวณ Spoilage)</label>
+          <select id="inputJobType" name="jobType" required>
+            <option value="simple">งาน 1–2 สี (Spoilage 5%)</option>
+            <option value="fourColor">งาน 4 สี CMYK (Spoilage 8%)</option>
+            <option value="newJob">งานใหม่ครั้งแรก (Spoilage 10%)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-field">
+          <label for="inputPrintMethod">วิธีพิมพ์</label>
+          <select id="inputPrintMethod" name="printMethod" required>
+            <option value="single">พิมพ์ 1 หน้า</option>
+            <option value="sheetwise">Sheetwise (พิมพ์ 2 รอบ, เพลท 2 ชุด)</option>
+            <option value="work-and-turn">Work-and-Turn (พิมพ์ 2 ด้าน, เพลท 1 ชุด)</option>
+            <option value="work-and-tumble">Work-and-Tumble (พิมพ์ 2 ด้าน, เพลท 1 ชุด)</option>
+          </select>
+        </div>
+      </div>`;
+  },
+
+  /**
    * Render print sides selector (วิธีพิมพ์: 1 หน้า / 2 หน้า Sheetwise / หน้าในตัว)
    */
   _renderPrintSides() {
@@ -922,6 +1008,12 @@ const Calculator = {
     const quantityUnitEl = document.getElementById('inputQuantityUnit');
     if (quantityUnitEl) data.quantityUnit = quantityUnitEl.value;
 
+    // Press sheet calculator fields
+    const jobTypeEl = document.getElementById('inputJobType');
+    if (jobTypeEl) data.jobType = jobTypeEl.value;
+    const printMethodEl = document.getElementById('inputPrintMethod');
+    if (printMethodEl) data.printMethod = printMethodEl.value;
+
     // Finishing options (checkboxes)
     const finishingCheckboxes = document.querySelectorAll('input[name="finishing"]:checked');
     data.finishing = Array.from(finishingCheckboxes).map((cb) => cb.value);
@@ -1012,6 +1104,10 @@ const Calculator = {
     if (inputData.gsm) specs.gsm = Number(inputData.gsm);
     if (inputData.sheetSize) specs.sheetSize = inputData.sheetSize;
     if (inputData.quantityUnit) specs.quantityUnit = inputData.quantityUnit;
+
+    // Press sheet calculator fields
+    if (inputData.jobType) specs.jobType = inputData.jobType;
+    if (inputData.printMethod) specs.printMethod = inputData.printMethod;
 
     return specs;
   },

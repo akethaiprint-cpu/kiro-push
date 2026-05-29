@@ -25,6 +25,8 @@ const PricingEngine = {
           return this.calculateInkjet(productType, specs, priceTable);
         case 'paperCalc':
           return this.calculatePaper(productType, specs, priceTable);
+        case 'pressSheet':
+          return this.calculatePressSheet(productType, specs, priceTable);
         default:
           return this._errorResult(system, productType, specs, 'ไม่พบระบบพิมพ์ที่เลือก');
       }
@@ -683,6 +685,115 @@ const PricingEngine = {
   },
 
   // ─── Helper Functions ───────────────────────────────────────────────
+
+  /**
+   * Press Sheet calculation — คำนวณใบพิมพ์
+   * คำนวณจำนวนชิ้นต่อแผ่น, ใบพิมพ์ขั้นต่ำ, spoilage, ใบพิมพ์รวม
+   * @param {string} productType - Ignored (single product type)
+   * @param {object} specs - { size: {width, height}, sheetSize, quantity, colorCount, jobType, printMethod }
+   * @param {object} priceTable - Full price table (unused for this calculation)
+   * @returns {CalculationResult}
+   */
+  calculatePressSheet(productType, specs, priceTable) {
+    const { size, sheetSize, quantity, colorCount, jobType, printMethod } = specs;
+
+    if (!size || !size.width || !size.height) {
+      return this._errorResult('pressSheet', productType, specs, 'กรุณาระบุขนาดชิ้นงาน');
+    }
+    if (!sheetSize) {
+      return this._errorResult('pressSheet', productType, specs, 'กรุณาเลือกขนาดกระดาษ');
+    }
+    if (!quantity || quantity <= 0) {
+      return this._errorResult('pressSheet', productType, specs, 'กรุณาระบุจำนวนพิมพ์');
+    }
+
+    // Sheet sizes in cm
+    const sheetSizes = {
+      '31x43': { width: 78.74, height: 109.22, name: '31×43 นิ้ว' },
+      '25x36': { width: 63.50, height: 91.44, name: '25×36 นิ้ว' },
+      '24x35': { width: 60.96, height: 88.90, name: '24×35 นิ้ว' },
+    };
+
+    const sheet = sheetSizes[sheetSize];
+    if (!sheet) {
+      return this._errorResult('pressSheet', productType, specs, 'ไม่พบขนาดกระดาษที่เลือก');
+    }
+
+    // Printable area (deduct Gripper 1.2 cm and Side Lay 0.7 cm)
+    const gripperMargin = 1.2; // cm
+    const sideLay = 0.7; // cm
+    const printableWidth = sheet.width - gripperMargin;
+    const printableHeight = sheet.height - sideLay;
+
+    // Bleed allowance: 0.6 cm per axis (3mm per side × 2 sides)
+    const bleed = 0.6;
+    const pieceWidth = size.width + bleed;
+    const pieceHeight = size.height + bleed;
+
+    // Calculate pieces per sheet (try both orientations)
+    const piecesNormal = Math.floor(printableWidth / pieceWidth) * Math.floor(printableHeight / pieceHeight);
+    const piecesRotated = Math.floor(printableWidth / pieceHeight) * Math.floor(printableHeight / pieceWidth);
+    const piecesPerSheet = Math.max(piecesNormal, piecesRotated);
+
+    if (piecesPerSheet <= 0) {
+      return this._errorResult('pressSheet', productType, specs, 'ชิ้นงานใหญ่เกินกว่าจะวางบนกระดาษที่เลือกได้');
+    }
+
+    // Spoilage percentage based on job type
+    const spoilageRates = {
+      'simple': 0.05,    // งาน 1-2 สี = 5%
+      'fourColor': 0.08, // งาน 4 สี = 8%
+      'newJob': 0.10,    // งานใหม่ = 10%
+    };
+    const spoilageRate = spoilageRates[jobType] || 0.05;
+
+    // Minimum press sheets (before spoilage)
+    const minSheets = Math.ceil(quantity / piecesPerSheet);
+
+    // Total press sheets (with spoilage)
+    const totalSheets = Math.ceil(minSheets * (1 + spoilageRate));
+    const spoilageSheets = totalSheets - minSheets;
+
+    // Print method notes
+    let methodNote = '';
+    const method = printMethod || 'single';
+    if (method === 'work-and-turn' || method === 'work-and-tumble') {
+      methodNote = 'พิมพ์ 2 ด้านในรอบเดียว ใช้เพลท 1 ชุด (' + (method === 'work-and-turn' ? 'Work-and-Turn' : 'Work-and-Tumble') + ')';
+    } else if (method === 'sheetwise') {
+      methodNote = 'พิมพ์ 2 รอบ ใช้เพลท 2 ชุด (Sheetwise)';
+    }
+
+    // Build cost breakdown (informational, no monetary cost)
+    const costBreakdown = [
+      { label: 'ขนาดกระดาษ', amount: 0, conditional: false, text: sheet.name + ' (' + sheet.width.toFixed(1) + '×' + sheet.height.toFixed(1) + ' ซม.)' },
+      { label: 'พื้นที่พิมพ์ได้', amount: 0, conditional: false, text: printableWidth.toFixed(1) + '×' + printableHeight.toFixed(1) + ' ซม.' },
+      { label: 'ขนาดชิ้นงาน (รวม bleed)', amount: 0, conditional: false, text: pieceWidth.toFixed(1) + '×' + pieceHeight.toFixed(1) + ' ซม.' },
+      { label: 'จำนวนชิ้นต่อแผ่น', amount: piecesPerSheet, conditional: false, unit: 'ชิ้น' },
+      { label: 'จำนวนพิมพ์', amount: quantity, conditional: false, unit: 'ชิ้น' },
+      { label: 'ใบพิมพ์ขั้นต่ำ', amount: minSheets, conditional: false, unit: 'แผ่น' },
+      { label: 'กระดาษเสีย (Spoilage ' + (spoilageRate * 100) + '%)', amount: spoilageSheets, conditional: false, unit: 'แผ่น' },
+      { label: 'ใบพิมพ์รวม', amount: totalSheets, conditional: false, unit: 'แผ่น' },
+    ];
+
+    if (colorCount) {
+      costBreakdown.push({ label: 'จำนวนสี', amount: colorCount, conditional: false, unit: 'สี' });
+    }
+
+    if (methodNote) {
+      costBreakdown.push({ label: 'หมายเหตุวิธีพิมพ์', amount: 0, conditional: false, text: methodNote });
+    }
+
+    return {
+      success: true,
+      system: 'pressSheet',
+      productType: productType,
+      costBreakdown: costBreakdown,
+      totalPrice: totalSheets,
+      unitPrice: piecesPerSheet,
+      quantity: quantity,
+      error: null
+    };
+  },
 
   /**
    * Calculate area in square centimeters
