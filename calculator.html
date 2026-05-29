@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>คำนวณราคาสิ่งพิมพ์ | ThaiPrint</title>
+<meta name="description" content="ระบบคำนวณราคาสิ่งพิมพ์ ซิลค์สกรีน ดิจิทัล Offset อุตสาหกรรม อิงค์เจ็ท">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/calculator.css">
+</head>
+<body>
+<!-- Nav -->
+<nav class="navbar" id="navbar">
+<div class="container">
+<a href="index.html" class="nav-logo"><div class="logo-icon">TP</div><span>ThaiPrint</span></a>
+<div class="nav-links" id="navLinks">
+<a href="index.html">หน้าหลัก</a>
+<a href="index.html#services">บริการ</a>
+<a href="calculator.html" class="active">คำนวณราคา</a>
+<a href="index.html#contact" class="nav-cta">ติดต่อเรา</a>
+</div>
+<button class="hamburger" id="hamburger" aria-label="เมนู"><span></span><span></span><span></span></button>
+</div>
+</nav>
+
+<!-- Calculator Section -->
+<main class="calc-main">
+<div class="container">
+<div class="calc-header">
+<h1 class="calc-title">คำนวณราคาสิ่งพิมพ์</h1>
+<p class="calc-desc">เลือกระบบพิมพ์และประเภทสินค้าเพื่อคำนวณราคาเบื้องต้น</p>
+</div>
+
+<!-- System Selection -->
+<section class="calc-section" id="systemSelection" aria-label="เลือกระบบพิมพ์">
+<h2 class="calc-section-title">เลือกระบบพิมพ์</h2>
+<div class="system-grid" id="systemGrid">
+<button type="button" class="system-card" data-system="screen" aria-pressed="false">
+<div class="system-card-icon">สก</div>
+<div class="system-card-info">
+<h3>ซิลค์สกรีน</h3>
+<p>สติกเกอร์, กล่อง, ถุงผ้า, ฉลากสินค้า</p>
+</div>
+</button>
+<button type="button" class="system-card" data-system="digitalOffset" aria-pressed="false">
+<div class="system-card-icon">ดจ</div>
+<div class="system-card-info">
+<h3>ดิจิทัล Offset</h3>
+<p>สติกเกอร์, ฉลากสินค้า, กล่อง, นามบัตร</p>
+</div>
+</button>
+<button type="button" class="system-card" data-system="industrialOffset" aria-pressed="false">
+<div class="system-card-icon">ออ</div>
+<div class="system-card-info">
+<h3>Offset อุตสาหกรรม</h3>
+<p>สติกเกอร์, ฉลาก, กล่อง, โบรชัวร์, หนังสือ</p>
+</div>
+</button>
+<button type="button" class="system-card" data-system="inkjet" aria-pressed="false">
+<div class="system-card-icon">อจ</div>
+<div class="system-card-info">
+<h3>อิงค์เจ็ท</h3>
+<p>ป้ายไวนิล, สติกเกอร์ใหญ่, แบนเนอร์, โปสเตอร์</p>
+</div>
+</button>
+</div>
+</section>
+
+<!-- Product Type Selection -->
+<section class="calc-section hidden" id="productSelection" aria-label="เลือกประเภทสินค้า">
+<h2 class="calc-section-title">เลือกประเภทสินค้า</h2>
+<div class="product-grid" id="productGrid">
+<!-- Product type buttons will be rendered by JS based on selected system -->
+</div>
+</section>
+
+<!-- Error Display -->
+<div class="calc-errors hidden" id="errorDisplay" role="alert" aria-live="polite">
+<h3>กรุณาแก้ไขข้อมูลต่อไปนี้</h3>
+<ul id="errorList">
+<!-- Validation errors will be rendered by JS -->
+</ul>
+</div>
+
+<!-- Input Form -->
+<section class="calc-section hidden" id="formSection" aria-label="กรอกข้อมูลงานพิมพ์">
+<h2 class="calc-section-title">กรอกข้อมูลงานพิมพ์</h2>
+<form id="calcForm" class="calc-form" novalidate>
+<div class="form-fields" id="formFields">
+<!-- Form fields will be rendered dynamically by JS based on system + product type -->
+</div>
+<div class="form-actions">
+<button type="submit" class="btn-calc" id="btnCalculate">คำนวณราคา</button>
+<button type="button" class="btn-reset" id="btnReset">ล้างข้อมูล</button>
+</div>
+</form>
+</section>
+
+<!-- Result Display -->
+<section class="calc-section hidden" id="resultSection" aria-label="สรุปราคา">
+<div class="result-card" id="resultCard">
+<h2 class="result-title">สรุปราคา</h2>
+<div class="result-breakdown" id="resultBreakdown">
+<!-- Cost breakdown items will be rendered by JS -->
+</div>
+<div class="result-total" id="resultTotal">
+<!-- Total price will be rendered by JS -->
+</div>
+<div class="result-actions">
+<button type="button" class="btn-print" id="btnPrint">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<polyline points="6 9 6 2 18 2 18 9"></polyline>
+<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+<rect x="6" y="14" width="12" height="8"></rect>
+</svg>
+พิมพ์ใบเสนอราคา
+</button>
+</div>
+</div>
+</section>
+
+</div>
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+<div class="container">
+<div class="footer-bottom">&copy; 2024 บริษัท ไทยพริ้นท์ อินเตอร์กรุ๊ป จำกัด | ThaiPrint.co.th</div>
+</div>
+</footer>
+
+<script src="js/storage.js"></script>
+<script src="js/validator.js"></script>
+<script src="js/pricing-engine.js"></script>
+<script src="js/quotation-printer.js"></script>
+<script src="js/calculator.js"></script>
+</body>
+</html>
