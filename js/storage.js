@@ -85,21 +85,21 @@ const StorageManager = {
 
       screen: {
         sticker: {
-          plateCost: 800,
+          plateCost: 250,
           printCostPerColor: {
             tiers: [
-              { minQty: 100, maxQty: 500, pricePerUnit: 1.50 },
-              { minQty: 501, maxQty: 1000, pricePerUnit: 1.00 },
-              { minQty: 1001, maxQty: 5000, pricePerUnit: 0.60 },
-              { minQty: 5001, maxQty: 1000000, pricePerUnit: 0.35 }
+              { minQty: 100, maxQty: 500, pricePerUnit: 2.00 },
+              { minQty: 501, maxQty: 1000, pricePerUnit: 1.80 },
+              { minQty: 1001, maxQty: 5000, pricePerUnit: 1.50 },
+              { minQty: 5001, maxQty: 1000000, pricePerUnit: 1.20 }
             ]
           },
           materials: {
-            paper: { name: "กระดาษ", pricePerSqCm: 0.005 },
-            pvc: { name: "PVC", pricePerSqCm: 0.012 },
-            pp: { name: "PP", pricePerSqCm: 0.010 },
-            pet: { name: "PET", pricePerSqCm: 0.015 },
-            foil: { name: "ฟอยล์", pricePerSqCm: 0.020 }
+            paper: { name: "กระดาษ", pricePerSqCm: 0.003 },
+            pvc: { name: "PVC", pricePerSqCm: 0.004 },
+            pp: { name: "PP", pricePerSqCm: 0.004 },
+            pet: { name: "PET", pricePerSqCm: 0.005 },
+            foil: { name: "ฟอยล์", pricePerSqCm: 0.006 }
           }
         },
         box: {
@@ -277,22 +277,51 @@ const StorageManager = {
       },
 
       industrialOffset: {
+        // === ข้อมูลราคาจ้างพิมพ์ Offset อุตสาหกรรม ===
+        // เพลทตัด4: ค่าเพลท 300 บาท/สี
+        // เพลทตัด2: ค่าเพลท 600 บาท/สี
+        // ---
+        // ค่าจ้างพิมพ์เพลทตัด4 หมึกคอนเวนชั่นนัล:
+        //   ไม่ถึง 1000 ใบ = เหมา 900 บาท/สี
+        //   1000-10000 ใบ = 900 บาท/สี (เหมา)
+        //   เกิน 10000 = ใบละ 0.10 บาท/สี (เฉพาะส่วนเกิน)
+        // ---
+        // ค่าจ้างพิมพ์เพลทตัด4 หมึก UV (งานพิมพ์พลาสติก):
+        //   ไม่ถึง 1000 ใบ = เหมา 1500 บาท/สี
+        //   1000 ใบแรก = 1500 บาท/สี
+        //   เกิน 1000 = ใบละ 1.00 บาท/สี
+        // ---
+        // ค่าจ้างพิมพ์เพลทตัด2 หมึกคอนเวนชั่นนัล:
+        //   ไม่ถึง 1000 ใบ = เหมา 1500 บาท/สี
+        //   1000-10000 ใบ = 1200 บาท/สี (เหมา)
+        //   เกิน 10000 = ใบละ 0.20 บาท/สี
+        // ---
+        // ค่าจ้างพิมพ์เพลทตัด2 หมึก UV:
+        //   ไม่ถึง 1000 ใบ = เหมา 1500 บาท/สี
+        //   1000-10000 ใบ = 2000 บาท/สี (เหมา)
+        //   เกิน 10000 = ใบละ 1.50 บาท/สี
+        printingRates: {
+          cut4_conventional: { plateCost: 300, flatRate: 900, flatRateMaxQty: 10000, overageRate: 0.10, minCharge: 900 },
+          cut4_uv: { plateCost: 300, flatRate: 1500, flatRateMaxQty: 1000, overageRate: 1.00, minCharge: 1500 },
+          cut2_conventional: { plateCost: 600, flatRate: 1200, flatRateMaxQty: 10000, overageRate: 0.20, minCharge: 1500 },
+          cut2_uv: { plateCost: 600, flatRate: 2000, flatRateMaxQty: 10000, overageRate: 1.50, minCharge: 1500 }
+        },
         sticker: {
-          plateCostPerColor: 2500,
+          plateCostPerColor: 300,
+          inkType: "conventional",
           printCost: {
             tiers: [
-              { minQty: 1000, maxQty: 5000, pricePerUnit: 0.40 },
-              { minQty: 5001, maxQty: 10000, pricePerUnit: 0.25 },
-              { minQty: 10001, maxQty: 50000, pricePerUnit: 0.15 },
-              { minQty: 50001, maxQty: 1000000, pricePerUnit: 0.08 }
+              { minQty: 1, maxQty: 999, pricePerUnit: 0.90 },
+              { minQty: 1000, maxQty: 10000, pricePerUnit: 0.90 },
+              { minQty: 10001, maxQty: 1000000, pricePerUnit: 0.10 }
             ]
           },
           materials: {
             artPaper: { name: "กระดาษอาร์ท", pricePerSqCm: 0.004 },
-            pvc: { name: "PVC", pricePerSqCm: 0.010 },
-            pp: { name: "PP", pricePerSqCm: 0.008 },
-            pet: { name: "PET", pricePerSqCm: 0.012 },
-            foil: { name: "ฟอยล์", pricePerSqCm: 0.018 }
+            pvc: { name: "PVC (หมึก UV)", pricePerSqCm: 0.004 },
+            pp: { name: "PP (หมึก UV)", pricePerSqCm: 0.004 },
+            pet: { name: "PET (หมึก UV)", pricePerSqCm: 0.005 },
+            foil: { name: "ฟอยล์", pricePerSqCm: 0.006 }
           },
           finishing: {
             laminate: { name: "เคลือบลามิเนต", pricePerSqCm: 0.002 },
@@ -301,13 +330,12 @@ const StorageManager = {
           }
         },
         label: {
-          plateCostPerColor: 2500,
+          plateCostPerColor: 300,
           printCost: {
             tiers: [
-              { minQty: 1000, maxQty: 5000, pricePerUnit: 0.35 },
-              { minQty: 5001, maxQty: 10000, pricePerUnit: 0.22 },
-              { minQty: 10001, maxQty: 50000, pricePerUnit: 0.12 },
-              { minQty: 50001, maxQty: 1000000, pricePerUnit: 0.07 }
+              { minQty: 1, maxQty: 999, pricePerUnit: 0.90 },
+              { minQty: 1000, maxQty: 10000, pricePerUnit: 0.90 },
+              { minQty: 10001, maxQty: 1000000, pricePerUnit: 0.10 }
             ]
           },
           materials: {
@@ -325,13 +353,12 @@ const StorageManager = {
           }
         },
         box: {
-          plateCostPerColor: 3000,
+          plateCostPerColor: 300,
           printCost: {
             tiers: [
-              { minQty: 1000, maxQty: 5000, pricePerUnit: 0.80 },
-              { minQty: 5001, maxQty: 10000, pricePerUnit: 0.50 },
-              { minQty: 10001, maxQty: 50000, pricePerUnit: 0.30 },
-              { minQty: 50001, maxQty: 100000, pricePerUnit: 0.18 }
+              { minQty: 1, maxQty: 999, pricePerUnit: 0.90 },
+              { minQty: 1000, maxQty: 10000, pricePerUnit: 0.90 },
+              { minQty: 10001, maxQty: 100000, pricePerUnit: 0.10 }
             ]
           },
           materials: {
@@ -347,13 +374,12 @@ const StorageManager = {
           }
         },
         brochure: {
-          plateCostPerColor: 2500,
+          plateCostPerColor: 300,
           printCost: {
             tiers: [
-              { minQty: 500, maxQty: 2000, pricePerUnit: 0.60 },
-              { minQty: 2001, maxQty: 5000, pricePerUnit: 0.35 },
-              { minQty: 5001, maxQty: 20000, pricePerUnit: 0.20 },
-              { minQty: 20001, maxQty: 100000, pricePerUnit: 0.12 }
+              { minQty: 1, maxQty: 999, pricePerUnit: 0.90 },
+              { minQty: 1000, maxQty: 10000, pricePerUnit: 0.90 },
+              { minQty: 10001, maxQty: 100000, pricePerUnit: 0.10 }
             ]
           },
           paperTypes: {
@@ -371,13 +397,12 @@ const StorageManager = {
           }
         },
         leaflet: {
-          plateCostPerColor: 2500,
+          plateCostPerColor: 300,
           printCost: {
             tiers: [
-              { minQty: 500, maxQty: 2000, pricePerUnit: 0.50 },
-              { minQty: 2001, maxQty: 5000, pricePerUnit: 0.30 },
-              { minQty: 5001, maxQty: 20000, pricePerUnit: 0.18 },
-              { minQty: 20001, maxQty: 100000, pricePerUnit: 0.10 }
+              { minQty: 1, maxQty: 999, pricePerUnit: 0.90 },
+              { minQty: 1000, maxQty: 10000, pricePerUnit: 0.90 },
+              { minQty: 10001, maxQty: 100000, pricePerUnit: 0.10 }
             ]
           },
           paperTypes: {
@@ -453,14 +478,14 @@ const StorageManager = {
       inkjet: {
         vinylSign: {
           pricePerSqM: {
-            "720dpi": 120,
-            "1440dpi": 180
+            "720dpi": 200,
+            "1440dpi": 500
           },
           media: {
-            glossyVinyl: { name: "ไวนิลเงา", pricePerSqM: 180 },
-            matteVinyl: { name: "ไวนิลด้าน", pricePerSqM: 200 },
-            perforatedVinyl: { name: "ไวนิลทะลุ", pricePerSqM: 280 },
-            koreanVinyl: { name: "ไวนิลเกาหลี", pricePerSqM: 250 }
+            glossyVinyl: { name: "ไวนิลเงา", pricePerSqM: 40 },
+            matteVinyl: { name: "ไวนิลด้าน", pricePerSqM: 45 },
+            perforatedVinyl: { name: "ไวนิลทะลุ", pricePerSqM: 80 },
+            koreanVinyl: { name: "ไวนิลเกาหลี", pricePerSqM: 60 }
           },
           finishing: {
             uvCoating: { name: "เคลือบ UV", pricePerSqM: 50 },
@@ -471,14 +496,14 @@ const StorageManager = {
         },
         largeSticker: {
           pricePerSqM: {
-            "720dpi": 150,
-            "1440dpi": 220
+            "720dpi": 200,
+            "1440dpi": 500
           },
           media: {
-            whiteStickerMedia: { name: "สติกเกอร์ขาว", pricePerSqM: 200 },
-            clearStickerMedia: { name: "สติกเกอร์ใส", pricePerSqM: 250 },
-            oneWayStickerMedia: { name: "สติกเกอร์วันเวย์", pricePerSqM: 350 },
-            carWrapStickerMedia: { name: "สติกเกอร์พื้นรถ", pricePerSqM: 400 }
+            whiteStickerMedia: { name: "สติกเกอร์ขาว", pricePerSqM: 50 },
+            clearStickerMedia: { name: "สติกเกอร์ใส", pricePerSqM: 60 },
+            oneWayStickerMedia: { name: "สติกเกอร์วันเวย์", pricePerSqM: 100 },
+            carWrapStickerMedia: { name: "สติกเกอร์พื้นรถ", pricePerSqM: 120 }
           },
           finishing: {
             uvCoating: { name: "เคลือบ UV", pricePerSqM: 50 },
@@ -488,13 +513,13 @@ const StorageManager = {
         },
         banner: {
           pricePerSqM: {
-            "720dpi": 100,
-            "1440dpi": 160
+            "720dpi": 200,
+            "1440dpi": 500
           },
           media: {
-            bannerFabric: { name: "ผ้าแบนเนอร์", pricePerSqM: 150 },
-            canvasFabric: { name: "ผ้าใบ", pricePerSqM: 220 },
-            satinFabric: { name: "ผ้าซาติน", pricePerSqM: 280 }
+            bannerFabric: { name: "ผ้าแบนเนอร์", pricePerSqM: 50 },
+            canvasFabric: { name: "ผ้าใบ", pricePerSqM: 80 },
+            satinFabric: { name: "ผ้าซาติน", pricePerSqM: 100 }
           },
           finishing: {
             uvCoating: { name: "เคลือบ UV", pricePerSqM: 50 },
@@ -505,13 +530,13 @@ const StorageManager = {
         },
         poster: {
           pricePerSqM: {
-            "720dpi": 130,
-            "1440dpi": 200
+            "720dpi": 200,
+            "1440dpi": 500
           },
           media: {
-            photoPaper: { name: "กระดาษโฟโต้", pricePerSqM: 180 },
-            artPaper: { name: "กระดาษอาร์ท", pricePerSqM: 150 },
-            ppAdhesive: { name: "PP กาว", pricePerSqM: 220 }
+            photoPaper: { name: "กระดาษโฟโต้", pricePerSqM: 80 },
+            artPaper: { name: "กระดาษอาร์ท", pricePerSqM: 50 },
+            ppAdhesive: { name: "PP กาว", pricePerSqM: 60 }
           },
           finishing: {
             uvCoating: { name: "เคลือบ UV", pricePerSqM: 50 },
