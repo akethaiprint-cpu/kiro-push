@@ -721,16 +721,18 @@ const Calculator = {
   },
 
   /**
-   * Render print sides selector (1 หน้า / 2 หน้า)
+   * Render print sides selector (วิธีพิมพ์: 1 หน้า / 2 หน้า Sheetwise / หน้าในตัว)
    */
   _renderPrintSides() {
     return `
       <div class="form-group">
         <div class="form-field">
-          <label for="inputPrintSides">จำนวนด้านที่พิมพ์</label>
+          <label for="inputPrintSides">วิธีพิมพ์</label>
           <select id="inputPrintSides" name="printSides" required>
             <option value="1">พิมพ์ 1 หน้า (หน้าเดียว)</option>
-            <option value="2">พิมพ์ 2 หน้า (หน้า-หลัง)</option>
+            <option value="2">พิมพ์ 2 หน้า — Sheetwise (แยกเพลท 2 ชุด)</option>
+            <option value="work-and-turn">พิมพ์ 2 หน้า — หน้าในตัว Work-and-Turn (เพลท 1 ชุด)</option>
+            <option value="work-and-tumble">พิมพ์ 2 หน้า — กลับคิปเปอร์ Work-and-Tumble (เพลท 1 ชุด)</option>
           </select>
         </div>
       </div>`;
@@ -871,8 +873,25 @@ const Calculator = {
     // Finishing options
     specs.finishing = inputData.finishing || [];
 
-    // Print sides (1 or 2) — ค่าพิมพ์คูณตามจำนวนด้าน
-    specs.printSides = Number(inputData.printSides) || 1;
+    // Print sides and method
+    // "1" = 1 หน้า, "2" = Sheetwise (2 เพลท), "work-and-turn" = หน้าในตัว (1 เพลท), "work-and-tumble" = กลับคิปเปอร์ (1 เพลท)
+    const printSidesValue = inputData.printSides || '1';
+    if (printSidesValue === '1') {
+      specs.printSides = 1;
+      specs.printMethod = 'single';
+    } else if (printSidesValue === '2') {
+      specs.printSides = 2;
+      specs.printMethod = 'sheetwise';
+    } else if (printSidesValue === 'work-and-turn') {
+      specs.printSides = 2;
+      specs.printMethod = 'work-and-turn';
+    } else if (printSidesValue === 'work-and-tumble') {
+      specs.printSides = 2;
+      specs.printMethod = 'work-and-tumble';
+    } else {
+      specs.printSides = 1;
+      specs.printMethod = 'single';
+    }
 
     return specs;
   },

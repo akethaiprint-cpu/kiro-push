@@ -58,7 +58,10 @@ const PricingEngine = {
     }
 
     // 1. Calculate plate cost
-    const plateCost = this.calculatePlateCost(colorCount, productTable.plateCost);
+    // Sheetwise: ค่าบล็อก × 2 (ต้องทำ 2 ชุด), Work-and-Turn/Tumble: × 1
+    const printMethod = specs.printMethod || 'single';
+    const plateMultiplier = (printMethod === 'sheetwise') ? 2 : 1;
+    const plateCost = this.calculatePlateCost(colorCount, productTable.plateCost) * plateMultiplier;
 
     // 2. Find print cost per color from quantity tiers
     const printCostPerUnit = this._findTierPrice(productTable.printCostPerColor.tiers, quantity);
@@ -66,7 +69,11 @@ const PricingEngine = {
       return this._errorResult('screen', productType, specs, 'ไม่พบข้อมูลราคาสำหรับจำนวนที่เลือก');
     }
     const printSides = specs.printSides || 1;
-    const printCost = printCostPerUnit * colorCount * quantity * printSides;
+    const printMethod = specs.printMethod || 'single';
+    // Work-and-Turn / Work-and-Tumble: พิมพ์ 2 ด้านแต่ใช้เพลท 1 ชุด ค่าพิมพ์ 1 รอบ
+    // Sheetwise: พิมพ์ 2 ด้าน ใช้เพลท 2 ชุด ค่าพิมพ์ 2 รอบ
+    const printMultiplier = (printMethod === 'sheetwise') ? 2 : (printSides === 2 ? 1 : 1);
+    const printCost = printCostPerUnit * colorCount * quantity * printMultiplier;
 
     // 3. Calculate material cost based on product type
     let materialCost = 0;
@@ -176,7 +183,10 @@ const PricingEngine = {
     // sheetsUsed = quantity (1 piece per sheet for simplicity)
     const sheetsUsed = quantity;
     const printSides = specs.printSides || 1;
-    const printingCost = perSheetPrice * sheetsUsed * printSides;
+    const printMethod = specs.printMethod || 'single';
+    // Sheetwise: × 2, Work-and-Turn/Tumble: × 1 (ได้ 2 ด้านในรอบเดียว)
+    const printMultiplier = (printMethod === 'sheetwise') ? 2 : 1;
+    const printingCost = perSheetPrice * sheetsUsed * printMultiplier;
 
     // 2. Calculate material cost based on product type
     let materialCost = 0;
@@ -295,7 +305,10 @@ const PricingEngine = {
     }
 
     // 1. Calculate plate cost (always present for industrial offset)
-    const plateCost = this.calculatePlateCost(colorCount, productTable.plateCostPerColor);
+    // Sheetwise: ค่าเพลท × 2 ชุด, Work-and-Turn/Tumble: × 1 ชุด
+    const printMethod = specs.printMethod || 'single';
+    const plateMultiplier = (printMethod === 'sheetwise') ? 2 : 1;
+    const plateCost = this.calculatePlateCost(colorCount, productTable.plateCostPerColor) * plateMultiplier;
 
     // 2. Calculate print cost
     // ค่าจ้างพิมพ์ Offset = ราคาเหมาต่อสี × จำนวนสี
@@ -308,6 +321,9 @@ const PricingEngine = {
     }
 
     const printSides = specs.printSides || 1;
+    const printMethodOffset = specs.printMethod || 'single';
+    // Sheetwise: ค่าพิมพ์ × 2 รอบ, Work-and-Turn/Tumble: × 1 รอบ
+    const printMultiplierOffset = (printMethodOffset === 'sheetwise') ? 2 : 1;
 
     if (printData.flatRate !== undefined) {
       // New format: flatRate + overage
@@ -317,11 +333,11 @@ const PricingEngine = {
 
       if (quantity <= flatRateMaxQty) {
         // ไม่เกิน flatRateMaxQty: คิดเหมา
-        printCost = flatRate * colorCount * printSides;
+        printCost = flatRate * colorCount * printMultiplierOffset;
       } else {
         // เกิน: เหมา + (ส่วนเกิน × overageRate) ต่อสี
         const overageQty = quantity - flatRateMaxQty;
-        printCost = (flatRate + overageRate * overageQty) * colorCount * printSides;
+        printCost = (flatRate + overageRate * overageQty) * colorCount * printMultiplierOffset;
       }
     } else if (printData.tiers) {
       // Legacy format: per-unit tiers
@@ -329,7 +345,7 @@ const PricingEngine = {
       if (printCostPerUnit === null) {
         return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาสำหรับจำนวนที่เลือก');
       }
-      printCost = printCostPerUnit * quantity * colorCount * printSides;
+      printCost = printCostPerUnit * quantity * colorCount * printMultiplierOffset;
     } else {
       return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาสำหรับรายการที่เลือก');
     }
@@ -452,10 +468,12 @@ const PricingEngine = {
     // Calculate area in square meters
     const areaSqM = (size.width * size.height) / 10000;
 
-    // 1. Print cost = pricePerSqM[resolution] × area × qty × printSides
+    // 1. Print cost = pricePerSqM[resolution] × area × qty × printMultiplier
     const printPricePerSqM = productTable.pricePerSqM[resolution];
     const printSides = specs.printSides || 1;
-    const printCost = printPricePerSqM * areaSqM * quantity * printSides;
+    const printMethod = specs.printMethod || 'single';
+    const printMultiplier = (printMethod === 'sheetwise') ? 2 : 1;
+    const printCost = printPricePerSqM * areaSqM * quantity * printMultiplier;
 
     // 2. Media cost = media.pricePerSqM × area × qty
     const mediaPricePerSqM = productTable.media[media].pricePerSqM;
