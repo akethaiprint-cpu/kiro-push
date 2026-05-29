@@ -40,6 +40,15 @@ const Calculator = {
       { key: 'banner', name: 'แบนเนอร์' },
       { key: 'poster', name: 'โปสเตอร์' },
     ],
+    paperCalc: [
+      { key: 'woodfree', name: 'กระดาษปอนด์ (Woodfree)' },
+      { key: 'artPaper', name: 'อาร์ตมัน/ด้าน (Art Paper)' },
+      { key: 'artBoard', name: 'อาร์ตการ์ด (Art Board)' },
+      { key: 'ivoryBoard', name: 'อาร์ตการ์ด 1 หน้า (Ivory)' },
+      { key: 'greyBack', name: 'กล่องแป้งหลังเทา' },
+      { key: 'kraft', name: 'คราฟท์' },
+      { key: 'cardWhite', name: 'กระดาษการ์ดขาว' },
+    ],
   },
 
   /**
@@ -205,6 +214,14 @@ const Calculator = {
     // Clear existing fields
     formFields.innerHTML = '';
 
+    // Paper calculator doesn't use Validator constraints
+    if (system === 'paperCalc') {
+      const fields = this._getFormFields(system, product, {}, null);
+      formFields.innerHTML = fields;
+      formSection.classList.remove('hidden');
+      return;
+    }
+
     // Get constraints for this system/product
     const constraints = Validator.getConstraints(system, product);
     if (!constraints) return;
@@ -301,12 +318,19 @@ const Calculator = {
     // Collect form data
     const inputData = this._collectFormData();
 
-    // Validate
-    const validation = Validator.validate(this.currentSystem, this.currentProduct, inputData);
-
-    if (!validation.valid) {
-      this.renderError(validation.errors);
-      return;
+    // Paper calculator: skip Validator, just check required fields
+    if (this.currentSystem === 'paperCalc') {
+      if (!inputData.gsm || !inputData.sheetSize || !inputData.quantity) {
+        this.renderError([{ field: 'form', message: 'กรุณากรอกข้อมูลให้ครบ (แกรม, ขนาดแผ่น, จำนวน)' }]);
+        return;
+      }
+    } else {
+      // Validate
+      const validation = Validator.validate(this.currentSystem, this.currentProduct, inputData);
+      if (!validation.valid) {
+        this.renderError(validation.errors);
+        return;
+      }
     }
 
     // Build specs object for PricingEngine
@@ -426,6 +450,11 @@ const Calculator = {
    */
   _getFormFields(system, product, constraints, productPriceData) {
     const fields = [];
+
+    // --- Paper Calculator (special system) ---
+    if (system === 'paperCalc') {
+      return this._getPaperCalcFields(product);
+    }
 
     // --- Size fields ---
     if (constraints.size && constraints.size.fixed) {
@@ -721,6 +750,60 @@ const Calculator = {
   },
 
   /**
+   * Render paper calculator form fields
+   */
+  _getPaperCalcFields(paperType) {
+    // GSM options based on paper type
+    const gsmOptions = {
+      woodfree: [60, 70, 80, 100, 120],
+      artPaper: [80, 85, 90, 100, 105, 113, 120, 128, 157],
+      artBoard: [190, 210, 230, 260, 300, 310, 350, 360, 400, 420],
+      ivoryBoard: [190, 210, 215, 230, 235, 250, 270, 280, 295, 300, 330, 350, 380],
+      greyBack: [250, 270, 300, 350, 400, 450],
+      kraft: [50, 60, 75, 117, 140, 170],
+      cardWhite: [150, 180, 210, 230, 250],
+    };
+
+    const gsms = gsmOptions[paperType] || [80];
+    const gsmOpts = gsms.map(g => `<option value="${g}">${g} แกรม</option>`).join('');
+
+    return `
+      <div class="form-group">
+        <div class="form-field">
+          <label for="inputGsm">แกรมกระดาษ</label>
+          <select id="inputGsm" name="gsm" required>
+            <option value="">— เลือกแกรม —</option>
+            ${gsmOpts}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-field">
+          <label for="inputSheetSize">ขนาดแผ่น</label>
+          <select id="inputSheetSize" name="sheetSize" required>
+            <option value="31x43">31 × 43 นิ้ว (เพลทตัด 2)</option>
+            <option value="25x36">25 × 36 นิ้ว</option>
+            <option value="24x35">24 × 35 นิ้ว (เพลทตัด 4)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group form-group-row">
+        <div class="form-field">
+          <label for="inputQuantity">จำนวน</label>
+          <input type="number" id="inputQuantity" name="quantity" min="1" step="1" placeholder="จำนวน" required>
+        </div>
+        <div class="form-field">
+          <label for="inputQuantityUnit">หน่วย</label>
+          <select id="inputQuantityUnit" name="quantityUnit" required>
+            <option value="ream">รีม (500 แผ่น)</option>
+            <option value="sheet">แผ่น</option>
+            <option value="kg">กิโลกรัม</option>
+          </select>
+        </div>
+      </div>`;
+  },
+
+  /**
    * Render print sides selector (วิธีพิมพ์: 1 หน้า / 2 หน้า Sheetwise / หน้าในตัว)
    */
   _renderPrintSides() {
@@ -821,6 +904,14 @@ const Calculator = {
     const printSidesEl = document.getElementById('inputPrintSides');
     if (printSidesEl) data.printSides = printSidesEl.value;
 
+    // Paper calculator fields
+    const gsmEl = document.getElementById('inputGsm');
+    if (gsmEl) data.gsm = gsmEl.value;
+    const sheetSizeEl = document.getElementById('inputSheetSize');
+    if (sheetSizeEl) data.sheetSize = sheetSizeEl.value;
+    const quantityUnitEl = document.getElementById('inputQuantityUnit');
+    if (quantityUnitEl) data.quantityUnit = quantityUnitEl.value;
+
     // Finishing options (checkboxes)
     const finishingCheckboxes = document.querySelectorAll('input[name="finishing"]:checked');
     data.finishing = Array.from(finishingCheckboxes).map((cb) => cb.value);
@@ -892,6 +983,11 @@ const Calculator = {
       specs.printSides = 1;
       specs.printMethod = 'single';
     }
+
+    // Paper calculator fields
+    if (inputData.gsm) specs.gsm = Number(inputData.gsm);
+    if (inputData.sheetSize) specs.sheetSize = inputData.sheetSize;
+    if (inputData.quantityUnit) specs.quantityUnit = inputData.quantityUnit;
 
     return specs;
   },

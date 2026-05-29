@@ -23,6 +23,8 @@ const PricingEngine = {
           return this.calculateIndustrialOffset(productType, specs, priceTable);
         case 'inkjet':
           return this.calculateInkjet(productType, specs, priceTable);
+        case 'paperCalc':
+          return this.calculatePaper(productType, specs, priceTable);
         default:
           return this._errorResult(system, productType, specs, 'ไม่พบระบบพิมพ์ที่เลือก');
       }
@@ -525,6 +527,160 @@ const PricingEngine = {
       quantity: quantity,
       error: null
     };
+  },
+
+  /**
+   * Paper price calculation
+   * คำนวณราคากระดาษจากแกรม ขนาด จำนวน พร้อม markup 20%
+   * @param {string} productType - Paper type key (woodfree, artPaper, artBoard, etc.)
+   * @param {object} specs - { gsm, sheetSize, quantity, quantityUnit, brand? }
+   * @param {object} priceTable - Full price table
+   * @returns {CalculationResult}
+   */
+  calculatePaper(productType, specs, priceTable) {
+    const { gsm, sheetSize, quantity, quantityUnit } = specs;
+
+    // Paper price data (ราคาต่อกก.)
+    const paperPrices = this.getPaperPricePerKg(productType, gsm, specs.brand);
+    if (!paperPrices) {
+      return this._errorResult('paperCalc', productType, specs, 'ไม่พบข้อมูลราคากระดาษสำหรับประเภทและแกรมที่เลือก');
+    }
+
+    // Sheet sizes in cm
+    const sheetSizes = {
+      '31x43': { width: 78.74, height: 109.22, name: '31×43 นิ้ว' },
+      '25x36': { width: 63.50, height: 91.44, name: '25×36 นิ้ว' },
+      '24x35': { width: 60.96, height: 88.90, name: '24×35 นิ้ว' },
+    };
+
+    const sheet = sheetSizes[sheetSize];
+    if (!sheet) {
+      return this._errorResult('paperCalc', productType, specs, 'ไม่พบขนาดกระดาษที่เลือก');
+    }
+
+    // Calculate weight per sheet (grams)
+    const weightPerSheet = (sheet.width * sheet.height * gsm) / 10000;
+
+    // Calculate total based on quantity unit
+    let totalSheets = 0;
+    let totalWeightKg = 0;
+
+    if (quantityUnit === 'ream') {
+      totalSheets = quantity * 500;
+      totalWeightKg = weightPerSheet * totalSheets / 1000;
+    } else if (quantityUnit === 'sheet') {
+      totalSheets = quantity;
+      totalWeightKg = weightPerSheet * totalSheets / 1000;
+    } else if (quantityUnit === 'kg') {
+      totalWeightKg = quantity;
+      totalSheets = Math.floor((quantity * 1000) / weightPerSheet);
+    }
+
+    // Calculate costs
+    const pricePerKg = paperPrices.pricePerKg;
+    const costPrice = totalWeightKg * pricePerKg;
+    const markup = 1.20; // 20% markup
+    const sellingPrice = costPrice * markup;
+    const pricePerSheetCost = (weightPerSheet / 1000) * pricePerKg;
+    const pricePerSheetSell = pricePerSheetCost * markup;
+
+    // Build cost breakdown
+    const costBreakdown = [
+      { label: 'ประเภทกระดาษ', amount: 0, conditional: false, text: paperPrices.name },
+      { label: 'น้ำหนักต่อแผ่น', amount: weightPerSheet, conditional: false, unit: 'กรัม' },
+      { label: 'จำนวนแผ่น', amount: totalSheets, conditional: false, unit: 'แผ่น' },
+      { label: 'น้ำหนักรวม', amount: totalWeightKg, conditional: false, unit: 'กก.' },
+      { label: 'ราคาต้นทุน (' + pricePerKg + ' บาท/กก.)', amount: costPrice, conditional: false },
+      { label: 'ราคาขาย (+20%)', amount: sellingPrice, conditional: false },
+      { label: 'ราคาต้นทุน/แผ่น', amount: pricePerSheetCost, conditional: false },
+      { label: 'ราคาขาย/แผ่น', amount: pricePerSheetSell, conditional: false },
+    ];
+
+    return {
+      success: true,
+      system: 'paperCalc',
+      productType: productType,
+      costBreakdown: costBreakdown,
+      totalPrice: sellingPrice,
+      unitPrice: pricePerSheetSell,
+      quantity: totalSheets,
+      error: null
+    };
+  },
+
+  /**
+   * Get paper price per kg based on type, gsm, and brand
+   * @param {string} paperType - Paper type key
+   * @param {number} gsm - Paper weight in GSM
+   * @param {string} [brand] - Optional brand
+   * @returns {object|null} { name, pricePerKg }
+   */
+  getPaperPricePerKg(paperType, gsm, brand) {
+    const prices = {
+      woodfree: [
+        { gsm: [60], brand: 'Sky Blue / Paper Plus', pricePerKg: 31.00 },
+        { gsm: [70, 80, 100, 120], brand: 'Sky Blue / Paper Plus', pricePerKg: 30.00 },
+        { gsm: [60], brand: 'UPM PEFC', pricePerKg: 32.00 },
+        { gsm: [70, 80], brand: 'UPM PEFC', pricePerKg: 31.00 },
+        { gsm: [60], brand: 'Premium X', pricePerKg: 30.00 },
+        { gsm: [70, 80, 100], brand: 'Premium X', pricePerKg: 29.00 },
+      ],
+      artPaper: [
+        { gsm: [80, 85, 90], brand: 'Superkote', pricePerKg: 34.00 },
+        { gsm: [100, 105, 113, 120, 128, 157], brand: 'Superkote', pricePerKg: 32.00 },
+        { gsm: [80], brand: 'Nevia Spakling', pricePerKg: 33.00 },
+        { gsm: [85, 90], brand: 'Nevia Spakling', pricePerKg: 32.00 },
+        { gsm: [100, 105, 113, 120, 128, 157], brand: 'Nevia Spakling', pricePerKg: 31.00 },
+        { gsm: [80, 85, 90], brand: 'YUKI/HI-KOTE/ART-TECH', pricePerKg: 32.00 },
+        { gsm: [100, 105, 115, 120, 128], brand: 'YUKI/HI-KOTE/ART-TECH', pricePerKg: 31.00 },
+      ],
+      artBoard: [
+        { gsm: [190, 210], brand: 'A-CARD', pricePerKg: 40.00 },
+        { gsm: [230, 260, 310, 360, 420], brand: 'A-CARD', pricePerKg: 39.00 },
+        { gsm: [190, 210, 230, 260, 310, 360, 400], brand: 'GB-U', pricePerKg: 34.00 },
+        { gsm: [190, 210, 230, 260, 300, 350], brand: 'Hi-Kote', pricePerKg: 30.00 },
+      ],
+      ivoryBoard: [
+        { gsm: [190, 210], brand: 'Sino Board', pricePerKg: 33.00 },
+        { gsm: [230, 250, 270, 300, 350], brand: 'Sino Board', pricePerKg: 32.00 },
+        { gsm: [280, 330, 380], brand: 'Sino Bulky', pricePerKg: 36.00 },
+        { gsm: [215, 235, 250, 295], brand: 'Allyking Cream', pricePerKg: 29.00 },
+      ],
+      greyBack: [
+        { gsm: [250], brand: 'Happy/KLEANNARA', pricePerKg: 23.50 },
+        { gsm: [270], brand: 'Happy/KLEANNARA', pricePerKg: 23.00 },
+        { gsm: [300, 350, 400, 450], brand: 'Happy/KLEANNARA', pricePerKg: 22.50 },
+      ],
+      kraft: [
+        { gsm: [50], brand: 'JN', pricePerKg: 31.00 },
+        { gsm: [60, 75], brand: 'JN', pricePerKg: 30.00 },
+        { gsm: [117], brand: 'ARIA / RED CROWN', pricePerKg: 40.00 },
+        { gsm: [140, 170], brand: 'PRO PACK', pricePerKg: 28.00 },
+      ],
+      cardWhite: [
+        { gsm: [150, 180, 210, 230, 250], brand: 'IK', pricePerKg: 34.50 },
+      ],
+    };
+
+    const paperList = prices[paperType];
+    if (!paperList) return null;
+
+    // Find matching price entry
+    for (const entry of paperList) {
+      if (entry.gsm.includes(gsm)) {
+        if (brand && entry.brand !== brand) continue;
+        return { name: paperType + ' ' + gsm + ' แกรม (' + entry.brand + ')', pricePerKg: entry.pricePerKg };
+      }
+    }
+
+    // If no exact match, find closest
+    for (const entry of paperList) {
+      if (entry.gsm.includes(gsm)) {
+        return { name: paperType + ' ' + gsm + ' แกรม (' + entry.brand + ')', pricePerKg: entry.pricePerKg };
+      }
+    }
+
+    return null;
   },
 
   // ─── Helper Functions ───────────────────────────────────────────────
