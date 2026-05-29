@@ -124,6 +124,15 @@ const Validator = {
         requiredFields: ['width', 'height', 'media', 'resolution', 'quantity'],
       },
     },
+    paperCalc: {
+      woodfree: { size: { fixed: true }, quantity: { min: 1, max: 100000 }, requiredFields: ['quantity'] },
+      artPaper: { size: { fixed: true }, quantity: { min: 1, max: 100000 }, requiredFields: ['quantity'] },
+      artBoard: { size: { fixed: true }, quantity: { min: 1, max: 100000 }, requiredFields: ['quantity'] },
+      ivoryBoard: { size: { fixed: true }, quantity: { min: 1, max: 100000 }, requiredFields: ['quantity'] },
+      greyBack: { size: { fixed: true }, quantity: { min: 1, max: 100000 }, requiredFields: ['quantity'] },
+      kraft: { size: { fixed: true }, quantity: { min: 1, max: 100000 }, requiredFields: ['quantity'] },
+      cardWhite: { size: { fixed: true }, quantity: { min: 1, max: 100000 }, requiredFields: ['quantity'] },
+    },
   },
 
   /**
