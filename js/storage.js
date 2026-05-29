@@ -310,9 +310,13 @@ const StorageManager = {
           plateCostPerColor: 300,
           inkType: "conventional",
           printCost: {
+            // flatRate = ราคาเหมาต่อสี (บาท), overageRate = ราคาต่อใบส่วนเกิน/สี
+            flatRate: 900,
+            flatRateMaxQty: 10000,
+            overageRate: 0.10,
+            minCharge: 900,
             tiers: [
-              { minQty: 1, maxQty: 999, pricePerUnit: 0.90 },
-              { minQty: 1000, maxQty: 10000, pricePerUnit: 0.90 },
+              { minQty: 1, maxQty: 10000, pricePerUnit: 900 },
               { minQty: 10001, maxQty: 1000000, pricePerUnit: 0.10 }
             ]
           },

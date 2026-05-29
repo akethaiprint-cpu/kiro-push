@@ -471,6 +471,9 @@ const Calculator = {
       fields.push(this._renderBindingType(productPriceData));
     }
 
+    // --- Print sides (1 หน้า / 2 หน้า) ---
+    fields.push(this._renderPrintSides());
+
     // --- Quantity ---
     fields.push(this._renderQuantity(constraints));
 
@@ -718,6 +721,22 @@ const Calculator = {
   },
 
   /**
+   * Render print sides selector (1 หน้า / 2 หน้า)
+   */
+  _renderPrintSides() {
+    return `
+      <div class="form-group">
+        <div class="form-field">
+          <label for="inputPrintSides">จำนวนด้านที่พิมพ์</label>
+          <select id="inputPrintSides" name="printSides" required>
+            <option value="1">พิมพ์ 1 หน้า (หน้าเดียว)</option>
+            <option value="2">พิมพ์ 2 หน้า (หน้า-หลัง)</option>
+          </select>
+        </div>
+      </div>`;
+  },
+
+  /**
    * Render finishing options as checkboxes
    */
   _renderFinishingOptions(system, product, productPriceData) {
@@ -796,6 +815,10 @@ const Calculator = {
     const quantityEl = document.getElementById('inputQuantity');
     if (quantityEl) data.quantity = quantityEl.value;
 
+    // Print sides (1 or 2)
+    const printSidesEl = document.getElementById('inputPrintSides');
+    if (printSidesEl) data.printSides = printSidesEl.value;
+
     // Finishing options (checkboxes)
     const finishingCheckboxes = document.querySelectorAll('input[name="finishing"]:checked');
     data.finishing = Array.from(finishingCheckboxes).map((cb) => cb.value);
@@ -847,6 +870,9 @@ const Calculator = {
 
     // Finishing options
     specs.finishing = inputData.finishing || [];
+
+    // Print sides (1 or 2) — ค่าพิมพ์คูณตามจำนวนด้าน
+    specs.printSides = Number(inputData.printSides) || 1;
 
     return specs;
   },

@@ -65,7 +65,8 @@ const PricingEngine = {
     if (printCostPerUnit === null) {
       return this._errorResult('screen', productType, specs, 'ไม่พบข้อมูลราคาสำหรับจำนวนที่เลือก');
     }
-    const printCost = printCostPerUnit * colorCount * quantity;
+    const printSides = specs.printSides || 1;
+    const printCost = printCostPerUnit * colorCount * quantity * printSides;
 
     // 3. Calculate material cost based on product type
     let materialCost = 0;
@@ -174,7 +175,8 @@ const PricingEngine = {
 
     // sheetsUsed = quantity (1 piece per sheet for simplicity)
     const sheetsUsed = quantity;
-    const printingCost = perSheetPrice * sheetsUsed;
+    const printSides = specs.printSides || 1;
+    const printingCost = perSheetPrice * sheetsUsed * printSides;
 
     // 2. Calculate material cost based on product type
     let materialCost = 0;
@@ -295,12 +297,42 @@ const PricingEngine = {
     // 1. Calculate plate cost (always present for industrial offset)
     const plateCost = this.calculatePlateCost(colorCount, productTable.plateCostPerColor);
 
-    // 2. Calculate print cost from quantity tiers
-    const printCostPerUnit = this._findTierPrice(productTable.printCost.tiers, quantity);
-    if (printCostPerUnit === null) {
-      return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาสำหรับจำนวนที่เลือก');
+    // 2. Calculate print cost
+    // ค่าจ้างพิมพ์ Offset = ราคาเหมาต่อสี × จำนวนสี
+    // ถ้าจำนวนเกิน flatRateMaxQty: (เหมา + ส่วนเกิน × overageRate) × จำนวนสี
+    let printCost = 0;
+    const printData = productTable.printCost;
+
+    if (!printData) {
+      return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาสำหรับรายการที่เลือก');
     }
-    const printCost = printCostPerUnit * quantity;
+
+    const printSides = specs.printSides || 1;
+
+    if (printData.flatRate !== undefined) {
+      // New format: flatRate + overage
+      const flatRate = printData.flatRate;
+      const flatRateMaxQty = printData.flatRateMaxQty || 10000;
+      const overageRate = printData.overageRate || 0;
+
+      if (quantity <= flatRateMaxQty) {
+        // ไม่เกิน flatRateMaxQty: คิดเหมา
+        printCost = flatRate * colorCount * printSides;
+      } else {
+        // เกิน: เหมา + (ส่วนเกิน × overageRate) ต่อสี
+        const overageQty = quantity - flatRateMaxQty;
+        printCost = (flatRate + overageRate * overageQty) * colorCount * printSides;
+      }
+    } else if (printData.tiers) {
+      // Legacy format: per-unit tiers
+      const printCostPerUnit = this._findTierPrice(printData.tiers, quantity);
+      if (printCostPerUnit === null) {
+        return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาสำหรับจำนวนที่เลือก');
+      }
+      printCost = printCostPerUnit * quantity * colorCount * printSides;
+    } else {
+      return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาสำหรับรายการที่เลือก');
+    }
 
     // 3. Calculate paper/material cost based on product type
     let paperCost = 0;
@@ -420,9 +452,10 @@ const PricingEngine = {
     // Calculate area in square meters
     const areaSqM = (size.width * size.height) / 10000;
 
-    // 1. Print cost = pricePerSqM[resolution] × area × qty
+    // 1. Print cost = pricePerSqM[resolution] × area × qty × printSides
     const printPricePerSqM = productTable.pricePerSqM[resolution];
-    const printCost = printPricePerSqM * areaSqM * quantity;
+    const printSides = specs.printSides || 1;
+    const printCost = printPricePerSqM * areaSqM * quantity * printSides;
 
     // 2. Media cost = media.pricePerSqM × area × qty
     const mediaPricePerSqM = productTable.media[media].pricePerSqM;
