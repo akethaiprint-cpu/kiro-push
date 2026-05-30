@@ -148,6 +148,72 @@ const Calculator = {
       });
     }
 
+    // Paper Cutting Optimizer — open/close + factory/mode change + apply (Tasks 8.3)
+    const btnOpenOptimizer = document.getElementById('btnOpenOptimizer');
+    if (btnOpenOptimizer) {
+      btnOpenOptimizer.addEventListener('click', () => {
+        const section = document.getElementById('paperCutOptimizerSection');
+        if (section) section.classList.remove('hidden');
+        // Initial render with default factory (25x36) and default mode (pieces)
+        const factoryEl = document.getElementById('optFactorySize');
+        const modeEl = document.getElementById('optMode');
+        const factoryKey = factoryEl ? factoryEl.value : '25x36';
+        const mode = modeEl ? modeEl.value : 'pieces';
+        this._renderPaperCutOptimizer(factoryKey, mode);
+      });
+    }
+
+    const btnCloseOptimizer = document.getElementById('btnCloseOptimizer');
+    if (btnCloseOptimizer) {
+      btnCloseOptimizer.addEventListener('click', () => {
+        const section = document.getElementById('paperCutOptimizerSection');
+        if (section) section.classList.add('hidden');
+      });
+    }
+
+    const optSection = document.getElementById('paperCutOptimizerSection');
+    if (optSection) {
+      // Factory / mode change → re-render
+      optSection.addEventListener('change', (e) => {
+        if (e.target && (e.target.id === 'optFactorySize' || e.target.id === 'optMode')) {
+          const factoryEl = document.getElementById('optFactorySize');
+          const modeEl = document.getElementById('optMode');
+          const factoryKey = factoryEl ? factoryEl.value : '25x36';
+          const mode = modeEl ? modeEl.value : 'pieces';
+          this._renderPaperCutOptimizer(factoryKey, mode);
+        }
+      });
+
+      // Apply cut button (delegated) — fill PressSheet form + close optimizer
+      optSection.addEventListener('click', (e) => {
+        if (!e.target || !e.target.classList.contains('btn-apply-cut')) return;
+        const cutW = parseFloat(e.target.getAttribute('data-cut-w'));
+        const cutH = parseFloat(e.target.getAttribute('data-cut-h'));
+        const press = e.target.getAttribute('data-press');
+        if (Number.isFinite(cutW) && Number.isFinite(cutH)) {
+          // Note: cut size is the PRESS SHEET size that goes into machine, not the printed-piece size
+          // Spec Req 11.3: fill Paper_Sheet width/height with cutWidth/cutHeight
+          // But our PressSheet form has inputWidth/inputHeight = printed-piece size, and inputSheetSize = factory paper key
+          // The closest semantic match: assume the user wants the cut to BE the new sheet size
+          // Since our sheet sizes are limited dropdown (31x43/25x36/24x35), we update the inputs to closest factory size
+          // and switch press machine — Req 11.3 + 11.4 (preserve other fields)
+          const inputPressType = document.getElementById('inputPressType');
+          if (inputPressType && press) {
+            inputPressType.value = press;
+            // Trigger Quick Select update if it's wired
+            if (typeof this._triggerQuickSelectUpdate === 'function') {
+              this._triggerQuickSelectUpdate();
+            }
+          }
+          // Show alert with the cut info — user can adjust manually (cut size != predefined sheet size)
+          alert('เลือกการตัด: ' + cutW.toFixed(1) + ' × ' + cutH.toFixed(1) + ' ซม.\nเครื่อง: ' + (PricingEngine.MACHINE_SPECS[press] ? PricingEngine.MACHINE_SPECS[press].name : press) + '\n\n(หมายเหตุ: ขนาดที่เลือกเป็น "ใบพิมพ์หลังตัด" — ระบบจะใช้ค่านี้เป็น sheet size ในการคำนวณ)');
+        }
+        // Close optimizer
+        const section = document.getElementById('paperCutOptimizerSection');
+        if (section) section.classList.add('hidden');
+      });
+    }
+
     // Restore session state
     this._restoreSession();
   },
@@ -987,10 +1053,12 @@ const Calculator = {
         <div class="form-field">
           <label for="inputJobType">ประเภทงาน (สำหรับคำนวณ Spoilage)</label>
           <select id="inputJobType" name="jobType" required>
-            <option value="simple">งาน 1–2 สี (Spoilage 5%)</option>
-            <option value="fourColor">งาน 4 สี CMYK (Spoilage 8%)</option>
-            <option value="fourColorFirst">งาน 4 สี ครั้งแรก (Spoilage 10%)</option>
-            <option value="newJob">งานใหม่ทั่วไป (Spoilage 10%)</option>
+            <option value="oneColorRepeat">1 สี ซ้ำ (Spoilage 3%, ขั้นต่ำ 50)</option>
+            <option value="twoColorGeneral" selected>2 สี ทั่วไป (Spoilage 5%, ขั้นต่ำ 100)</option>
+            <option value="fourColorRepeat">4 สี ซ้ำ (Spoilage 8%, ขั้นต่ำ 100)</option>
+            <option value="fourColorFirst">4 สี ครั้งแรก (Spoilage 10%, ขั้นต่ำ 150)</option>
+            <option value="uvOrPantone">UV / Pantone (Spoilage 10%, ขั้นต่ำ 100)</option>
+            <option value="specialPaper">กระดาษพิเศษ (Spoilage 15%, ขั้นต่ำ 150)</option>
           </select>
         </div>
       </div>
@@ -1152,6 +1220,85 @@ const Calculator = {
     this._qsDebounceTimer = setTimeout(() => {
       this._triggerQuickSelectUpdate();
     }, 300);
+  },
+
+  /**
+   * Render Paper Cutting Optimizer table — Tasks 8.2
+   * Req 9.4, 9.5, 7.4
+   * @param {string} factoryKey - '31x43' | '25x36' | '24x35' | '19x25'
+   * @param {'pieces'|'waste'} optimizeFor
+   */
+  _renderPaperCutOptimizer(factoryKey, optimizeFor) {
+    const container = document.getElementById('paperCutOptimizerResults');
+    if (!container) return;
+    if (typeof PricingEngine === 'undefined' || !PricingEngine.PaperCuttingOptimizer) {
+      container.innerHTML = '<div class="qs-warning">ไม่พบโมดูล Paper Cutting Optimizer</div>';
+      return;
+    }
+
+    const result = PricingEngine.PaperCuttingOptimizer.optimize(factoryKey, [], optimizeFor);
+    if (!result.success) {
+      container.innerHTML = '<div class="qs-warning" style="background:#f8d7da;padding:0.6rem;border-radius:4px;">' + (result.error || 'ไม่สามารถคำนวณการตัดกระดาษได้') + '</div>';
+      return;
+    }
+
+    const { factory, results } = result;
+    const lookupName = function(key) {
+      const m = PricingEngine.MACHINE_SPECS[key];
+      return m ? m.name : key;
+    };
+
+    const hasAnyCompatible = results.some(function(r) { return r.compatibleMachines && r.compatibleMachines.length > 0; });
+
+    let html = '';
+    html += '<p style="margin:0 0 0.5rem;color:#555;"><strong>กระดาษโรงงาน:</strong> ' + factory.label +
+            ' (' + factory.width.toFixed(1) + '×' + factory.height.toFixed(1) + ' ซม.)' +
+            ' &nbsp; <strong>พื้นที่:</strong> ' + (factory.width * factory.height).toFixed(0) + ' ตร.ซม.</p>';
+
+    if (!hasAnyCompatible) {
+      html += '<div class="qs-warning" style="background:#f8d7da;padding:0.6rem;border-radius:4px;margin-bottom:0.5rem;">⚠️ ไม่มีตัดที่เข้าเครื่องที่เลือก</div>';
+    }
+
+    // Table
+    html += '<table class="opt-table" style="width:100%;border-collapse:collapse;font-size:0.95em;">';
+    html += '<thead><tr style="background:#f5f5f5;border-bottom:2px solid #ddd;">';
+    html += '<th style="padding:0.5rem;text-align:center;">แนะนำ</th>';
+    html += '<th style="padding:0.5rem;text-align:center;">แถว × คอลัมน์</th>';
+    html += '<th style="padding:0.5rem;text-align:center;">ชิ้น/ใบ</th>';
+    html += '<th style="padding:0.5rem;text-align:center;">ขนาดชิ้น (ซม.)</th>';
+    html += '<th style="padding:0.5rem;text-align:right;">เศษเสีย (ตร.ซม.)</th>';
+    html += '<th style="padding:0.5rem;text-align:left;">เครื่องที่เข้าได้</th>';
+    html += '<th style="padding:0.5rem;text-align:center;">ใช้</th>';
+    html += '</tr></thead><tbody>';
+
+    for (const r of results) {
+      const rowStyle = r.recommended ? 'background:#d4edda;font-weight:500;' : '';
+      const noCompat = r.compatibleMachines.length === 0;
+      const compatStr = noCompat
+        ? '<span style="color:#999;">— ไม่มี —</span>'
+        : r.compatibleMachines.map(lookupName).join(', ');
+      const applyBtn = noCompat
+        ? '<span style="color:#999;">—</span>'
+        : '<button type="button" class="btn-apply-cut" data-rows="' + r.rows + '" data-cols="' + r.cols +
+          '" data-cut-w="' + r.cutWidth.toFixed(2) + '" data-cut-h="' + r.cutHeight.toFixed(2) +
+          '" data-press="' + r.compatibleMachines[0] + '" style="padding:0.3rem 0.6rem;background:#28a745;color:#fff;border:none;border-radius:3px;cursor:pointer;">เลือก</button>';
+      const recommendedBadge = r.recommended
+        ? '<span style="background:#ffc107;padding:0.2rem 0.5rem;border-radius:3px;font-weight:bold;">⭐ แนะนำ</span>'
+        : '';
+
+      html += '<tr style="' + rowStyle + 'border-bottom:1px solid #eee;">';
+      html += '<td style="padding:0.5rem;text-align:center;">' + recommendedBadge + '</td>';
+      html += '<td style="padding:0.5rem;text-align:center;">' + r.rows + ' × ' + r.cols + '</td>';
+      html += '<td style="padding:0.5rem;text-align:center;">' + r.cutsPerSheet + '</td>';
+      html += '<td style="padding:0.5rem;text-align:center;">' + r.cutWidth.toFixed(1) + ' × ' + r.cutHeight.toFixed(1) + '</td>';
+      html += '<td style="padding:0.5rem;text-align:right;">' + r.wasteCm2.toFixed(1) + '</td>';
+      html += '<td style="padding:0.5rem;text-align:left;font-size:0.9em;">' + compatStr + '</td>';
+      html += '<td style="padding:0.5rem;text-align:center;">' + applyBtn + '</td>';
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+
+    container.innerHTML = html;
   },
 
   /**
