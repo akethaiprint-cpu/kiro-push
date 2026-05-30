@@ -123,15 +123,27 @@ const Calculator = {
     const formSection = document.getElementById('formSection');
     if (formSection) {
       formSection.addEventListener('input', (e) => {
-        if (e.target && e.target.id === 'inputQuantity') {
+        if (!e.target) return;
+        if (e.target.id === 'inputQuantity') {
           this.handleQuantityChange(e.target.value);
+        }
+        // Quick Select recompute (debounced) on number input changes (Req 2.1, 3.1, 4.1)
+        if (this.currentSystem === 'pressSheet' &&
+            ['inputQuantity', 'inputWidth', 'inputHeight', 'inputColorCount'].includes(e.target.id)) {
+          this._debounceQuickSelectUpdate();
         }
       });
 
-      // pressSheet: cascade gsm options when paperType changes
+      // pressSheet: cascade gsm options when paperType changes + trigger Quick Select
       formSection.addEventListener('change', (e) => {
-        if (e.target && e.target.id === 'inputPaperType' && this.currentSystem === 'pressSheet') {
+        if (!e.target || this.currentSystem !== 'pressSheet') return;
+        const id = e.target.id;
+        if (id === 'inputPaperType') {
           this._updatePressSheetGsmOptions(e.target.value);
+        }
+        // Trigger Quick Select on relevant field changes (Req 2.1, 3.1, 4.1)
+        if (['inputSheetSize', 'inputColorCount', 'inputPrintMethod', 'inputPressType', 'inputWidth', 'inputHeight', 'inputPaperType'].includes(id)) {
+          this._triggerQuickSelectUpdate();
         }
       });
     }
@@ -839,9 +851,9 @@ const Calculator = {
         <div class="form-field">
           <label for="inputSheetSize">ขนาดแผ่น</label>
           <select id="inputSheetSize" name="sheetSize" required>
-            <option value="31x43">31 × 43 นิ้ว (เพลทตัด 2)</option>
-            <option value="25x36">25 × 36 นิ้ว</option>
-            <option value="24x35">24 × 35 นิ้ว (เพลทตัด 4)</option>
+            <option value="31x43">31 × 43 นิ้ว (78.74 × 109.22 ซม.) — B1</option>
+            <option value="25x36">25 × 36 นิ้ว (63.50 × 91.44 ซม.)</option>
+            <option value="24x35">24 × 35 นิ้ว (60.96 × 88.90 ซม.) — เหมาะ A4</option>
           </select>
         </div>
       </div>
@@ -895,6 +907,25 @@ const Calculator = {
       `<option value="${p.key}">${p.name}</option>`
     ).join('');
 
+    // Build press machine options sorted by plateSize (Req 1.8)
+    // ตัด 8 → ตัด 4 → ตัด 2 → ตัด 1 (smallest plate to largest)
+    const PLATE_ORDER = { 'ตัด 8': 0, 'ตัด 4': 1, 'ตัด 2': 2, 'ตัด 1': 3 };
+    const getPlateOrder = (plateSize) => {
+      if (typeof plateSize !== 'string') return 99;
+      const match = plateSize.match(/ตัด\s*\d+/);
+      if (!match) return 99;
+      const key = match[0].replace(/\s+/, ' ');
+      return PLATE_ORDER[key] !== undefined ? PLATE_ORDER[key] : 99;
+    };
+    let pressMachineOpts = '';
+    if (typeof PricingEngine !== 'undefined' && PricingEngine.MACHINE_SPECS) {
+      const pressEntries = Object.entries(PricingEngine.MACHINE_SPECS)
+        .sort(([, a], [, b]) => getPlateOrder(a.plateSize) - getPlateOrder(b.plateSize));
+      pressMachineOpts = pressEntries.map(([key, spec]) =>
+        `<option value="${key}">${spec.name} (${spec.plateSize}, รับ ${spec.maxWidth}×${spec.maxHeight} ซม., เพลท ${spec.plateCostPerColor} บาท/สี)</option>`
+      ).join('');
+    }
+
     return `
       <div class="form-group form-group-row">
         <div class="form-field">
@@ -936,13 +967,7 @@ const Calculator = {
           <label for="inputPressType">เครื่องพิมพ์</label>
           <select id="inputPressType" name="pressType" required>
             <option value="">— เลือกเครื่องพิมพ์ —</option>
-            <option value="heidelberg_gto46">Heidelberg GTO 46 (รับ 46×34 ซม., เพลท 200 บาท/สี)</option>
-            <option value="heidelberg_mo">Heidelberg MO / MOZ / MOV (รับ 48×65 ซม., เพลท 300 บาท/สี)</option>
-            <option value="heidelberg_movp">Heidelberg MOVP — Perfector (รับ 48×65 ซม., เพลท 300 บาท/สี, 2 ด้านรอบเดียว)</option>
-            <option value="heidelberg_sm52">Heidelberg SM52 (รับ 52×37 ซม., เพลท 250 บาท/สี)</option>
-            <option value="heidelberg_sm74">Heidelberg SM74 (รับ 74×52 ซม., เพลท 500 บาท/สี)</option>
-            <option value="heidelberg_cd102">Heidelberg CD102 / XL102 (รับ 102×72 ซม., เพลท 600 บาท/สี)</option>
-            <option value="komori_s40">Komori Lithrone S40 (รับ 106×75 ซม., เพลท 700 บาท/สี)</option>
+            ${pressMachineOpts}
           </select>
         </div>
       </div>
@@ -964,7 +989,17 @@ const Calculator = {
           <select id="inputJobType" name="jobType" required>
             <option value="simple">งาน 1–2 สี (Spoilage 5%)</option>
             <option value="fourColor">งาน 4 สี CMYK (Spoilage 8%)</option>
-            <option value="newJob">งานใหม่ครั้งแรก (Spoilage 10%)</option>
+            <option value="fourColorFirst">งาน 4 สี ครั้งแรก (Spoilage 10%)</option>
+            <option value="newJob">งานใหม่ทั่วไป (Spoilage 10%)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-field">
+          <label for="inputInkType">ประเภทหมึก</label>
+          <select id="inputInkType" name="inkType" required>
+            <option value="conventional" selected>คอนเวนชั่นนัล</option>
+            <option value="uv">UV (สำหรับงานพิมพ์พลาสติก)</option>
           </select>
         </div>
       </div>
@@ -978,7 +1013,23 @@ const Calculator = {
             <option value="work-and-tumble">Work-and-Tumble (พิมพ์ 2 ด้าน, เพลท 1 ชุด)</option>
           </select>
         </div>
-      </div>`;
+      </div>
+      <div class="form-group">
+        <details class="advanced-options">
+          <summary style="cursor:pointer; padding: 0.5rem 0; font-weight: 500; color: #666;">⚙️ ตัวเลือกขั้นสูง (Advanced)</summary>
+          <div class="form-group form-group-row" style="margin-top:0.5rem;">
+            <div class="form-field">
+              <label for="inputGripper">Gripper Margin (มม.) — ปกติ 12</label>
+              <input type="number" id="inputGripper" name="gripperOverride" min="10" max="15" step="0.1" placeholder="10–15">
+            </div>
+            <div class="form-field">
+              <label for="inputSideLay">Side Lay (มม.) — ปกติ 7</label>
+              <input type="number" id="inputSideLay" name="sideLayOverride" min="5" max="10" step="0.1" placeholder="5–10">
+            </div>
+          </div>
+        </details>
+      </div>
+      <div id="quickSelectPanel" class="quick-select-panel" style="margin-top: 1rem;"></div>`;
   },
 
   /**
@@ -998,6 +1049,109 @@ const Calculator = {
     const opts = gsms.map(g => `<option value="${g}">${g} แกรม</option>`).join('');
     gsmEl.innerHTML = '<option value="">— เลือกแกรม —</option>' + opts;
     gsmEl.disabled = false;
+  },
+
+  /**
+   * Render Quick Select panel ใต้ฟอร์ม pressSheet
+   * เรียกเมื่อ user เปลี่ยน sheetSize, quantity, colorCount, printMethod, pressType
+   * @param {object} specs - { sheetSize, quantity, colorCount, printMethod, pieceSize, currentPress }
+   */
+  _renderQuickSelect(specs) {
+    const panel = document.getElementById('quickSelectPanel');
+    if (!panel) return;
+    if (typeof PricingEngine === 'undefined' || !PricingEngine.QuickSelect) return;
+
+    const QS = PricingEngine.QuickSelect;
+    const SHEET_DIMS = {
+      '31x43': { width: 78.74, height: 109.22, name: '31×43 นิ้ว' },
+      '25x36': { width: 63.50, height: 91.44,  name: '25×36 นิ้ว' },
+      '24x35': { width: 60.96, height: 88.90,  name: '24×35 นิ้ว' },
+    };
+    const sheetDim = specs.sheetSize ? SHEET_DIMS[specs.sheetSize] : null;
+    if (!sheetDim) {
+      panel.innerHTML = '';
+      return;
+    }
+
+    const bySize  = QS.recommendByPaperSize(sheetDim);
+    const byColor = (specs.colorCount && specs.colorCount > 0)
+      ? QS.recommendByColorCount(specs.colorCount, specs.printMethod)
+      : bySize;
+    const intersection = QS.intersectRecommendations(bySize, byColor);
+    const methodRec = (specs.quantity && specs.quantity > 0) ? QS.recommendByQuantity(specs.quantity) : null;
+    const a4Warning = QS.checkA4Warning(specs.sheetSize, specs.pieceSize || { width: 0, height: 0 });
+
+    const lookupName = (key) => {
+      const spec = PricingEngine.MACHINE_SPECS[key];
+      return spec ? spec.name : key;
+    };
+
+    let html = '';
+
+    // A4 warning (Req 2.10)
+    if (a4Warning) {
+      html += `<div class="qs-warning" style="background:#fff3cd; border:1px solid #ffc107; padding:0.6rem 0.8rem; border-radius:4px; margin-bottom:0.5rem;">${a4Warning}</div>`;
+    }
+
+    // Recommended machines (Req 2.1, 4.5)
+    if (intersection.length > 0) {
+      const names = intersection.map(lookupName).join(', ');
+      html += `<div class="qs-recommend" style="background:#d1ecf1; border:1px solid #0c5460; padding:0.6rem 0.8rem; border-radius:4px; margin-bottom:0.5rem;"><strong>💡 เครื่องที่แนะนำ:</strong> ${names}</div>`;
+    } else if (bySize.length > 0) {
+      // Fallback ใช้ bySize เพียงอย่างเดียวถ้า intersection ว่าง
+      const names = bySize.map(lookupName).join(', ');
+      html += `<div class="qs-recommend" style="background:#d1ecf1; border:1px solid #0c5460; padding:0.6rem 0.8rem; border-radius:4px; margin-bottom:0.5rem;"><strong>💡 เครื่องที่รับขนาดกระดาษนี้ได้:</strong> ${names}</div>`;
+    }
+
+    // Recommended print method (Req 3.1–3.5)
+    if (methodRec && methodRec.primary) {
+      const methodLabels = {
+        'work-and-turn': 'Work-and-Turn',
+        'sheetwise':     'Sheetwise',
+      };
+      const primaryLabel = methodLabels[methodRec.primary] || methodRec.primary;
+      html += `<div class="qs-method" style="background:#d4edda; border:1px solid #28a745; padding:0.6rem 0.8rem; border-radius:4px; margin-bottom:0.5rem;"><strong>⚙️ วิธีพิมพ์ที่แนะนำ:</strong> ${primaryLabel} — ${methodRec.reason}</div>`;
+    }
+
+    // Warning if user picked a press not in recommended list (Req 2.9)
+    if (specs.currentPress && bySize.length > 0 && !bySize.includes(specs.currentPress)) {
+      html += `<div class="qs-warning" style="background:#f8d7da; border:1px solid #dc3545; padding:0.6rem 0.8rem; border-radius:4px; margin-bottom:0.5rem;">⚠️ เครื่องที่เลือก (${lookupName(specs.currentPress)}) อาจรับกระดาษ ${sheetDim.name} ไม่ได้ — ตรวจสอบขนาดอีกครั้ง</div>`;
+    }
+
+    panel.innerHTML = html;
+  },
+
+  /**
+   * Trigger Quick Select update — collect current form values and re-render panel
+   */
+  _triggerQuickSelectUpdate() {
+    if (this.currentSystem !== 'pressSheet') return;
+    const get = (id) => {
+      const el = document.getElementById(id);
+      return el ? el.value : '';
+    };
+    const specs = {
+      sheetSize: get('inputSheetSize'),
+      quantity: Number(get('inputQuantity')) || 0,
+      colorCount: Number(get('inputColorCount')) || 0,
+      printMethod: get('inputPrintMethod'),
+      currentPress: get('inputPressType'),
+      pieceSize: {
+        width: Number(get('inputWidth')) || 0,
+        height: Number(get('inputHeight')) || 0,
+      },
+    };
+    this._renderQuickSelect(specs);
+  },
+
+  /**
+   * Debounced Quick Select update (300ms)
+   */
+  _debounceQuickSelectUpdate() {
+    if (this._qsDebounceTimer) clearTimeout(this._qsDebounceTimer);
+    this._qsDebounceTimer = setTimeout(() => {
+      this._triggerQuickSelectUpdate();
+    }, 300);
   },
 
   /**
@@ -1119,6 +1273,14 @@ const Calculator = {
     const pressTypeEl = document.getElementById('inputPressType');
     if (pressTypeEl) data.pressType = pressTypeEl.value;
 
+    // pressSheet: inkType + advanced overrides (gripper / side lay in mm)
+    const inkTypeEl = document.getElementById('inputInkType');
+    if (inkTypeEl) data.inkType = inkTypeEl.value;
+    const gripperEl = document.getElementById('inputGripper');
+    if (gripperEl) data.gripperOverride = gripperEl.value;
+    const sideLayEl = document.getElementById('inputSideLay');
+    if (sideLayEl) data.sideLayOverride = sideLayEl.value;
+
     // Finishing options (checkboxes)
     const finishingCheckboxes = document.querySelectorAll('input[name="finishing"]:checked');
     data.finishing = Array.from(finishingCheckboxes).map((cb) => cb.value);
@@ -1215,6 +1377,20 @@ const Calculator = {
     if (inputData.printMethod) specs.printMethod = inputData.printMethod;
     if (inputData.paperType) specs.paperType = inputData.paperType;
     if (inputData.pressType) specs.pressType = inputData.pressType;
+
+    // pressSheet: inkType (Req 8) — default conventional
+    specs.inkType = inputData.inkType === 'uv' ? 'uv' : 'conventional';
+
+    // pressSheet: Gripper / Side Lay overrides (Req 5.4–5.5)
+    // Form input หน่วย mm แต่ engine คาดค่า cm → หาร 10
+    if (inputData.gripperOverride !== undefined && inputData.gripperOverride !== '' && inputData.gripperOverride !== null) {
+      const g = Number(inputData.gripperOverride);
+      if (Number.isFinite(g)) specs.gripperOverride = g / 10;
+    }
+    if (inputData.sideLayOverride !== undefined && inputData.sideLayOverride !== '' && inputData.sideLayOverride !== null) {
+      const s = Number(inputData.sideLayOverride);
+      if (Number.isFinite(s)) specs.sideLayOverride = s / 10;
+    }
 
     return specs;
   },

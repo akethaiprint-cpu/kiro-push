@@ -278,33 +278,33 @@ const StorageManager = {
 
       industrialOffset: {
         // === ข้อมูลราคาจ้างพิมพ์ Offset อุตสาหกรรม ===
-        // เพลทตัด4: ค่าเพลท 300 บาท/สี
-        // เพลทตัด2: ค่าเพลท 600 บาท/สี
+        // เพลทตัด 4 = เพลทเล็ก 55×65 ซม. (เครื่อง MO/MOZ/MOV) ค่าเพลท 300 บาท/สี
+        // เพลทตัด 2 = เพลทใหญ่ 74×52 ซม. (เครื่อง SM74) ค่าเพลท 600 บาท/สี
         // ---
-        // ค่าจ้างพิมพ์เพลทตัด4 หมึกคอนเวนชั่นนัล:
+        // ค่าจ้างพิมพ์เพลทตัด 4 (MO) หมึกคอนเวนชั่นนัล:
         //   ไม่ถึง 1000 ใบ = เหมา 900 บาท/สี
         //   1000-10000 ใบ = 900 บาท/สี (เหมา)
         //   เกิน 10000 = ใบละ 0.10 บาท/สี (เฉพาะส่วนเกิน)
         // ---
-        // ค่าจ้างพิมพ์เพลทตัด4 หมึก UV (งานพิมพ์พลาสติก):
+        // ค่าจ้างพิมพ์เพลทตัด 4 (MO) หมึก UV (งานพิมพ์พลาสติก):
         //   ไม่ถึง 1000 ใบ = เหมา 1500 บาท/สี
         //   1000 ใบแรก = 1500 บาท/สี
         //   เกิน 1000 = ใบละ 1.00 บาท/สี
         // ---
-        // ค่าจ้างพิมพ์เพลทตัด2 หมึกคอนเวนชั่นนัล:
+        // ค่าจ้างพิมพ์เพลทตัด 2 (SM74) หมึกคอนเวนชั่นนัล:
         //   ไม่ถึง 1000 ใบ = เหมา 1500 บาท/สี
         //   1000-10000 ใบ = 1200 บาท/สี (เหมา)
         //   เกิน 10000 = ใบละ 0.20 บาท/สี
         // ---
-        // ค่าจ้างพิมพ์เพลทตัด2 หมึก UV:
+        // ค่าจ้างพิมพ์เพลทตัด 2 (SM74) หมึก UV:
         //   ไม่ถึง 1000 ใบ = เหมา 1500 บาท/สี
         //   1000-10000 ใบ = 2000 บาท/สี (เหมา)
         //   เกิน 10000 = ใบละ 1.50 บาท/สี
         printingRates: {
-          cut4_conventional: { plateCost: 300, flatRate: 900, flatRateMaxQty: 10000, overageRate: 0.10, minCharge: 900 },
-          cut4_uv: { plateCost: 300, flatRate: 1500, flatRateMaxQty: 1000, overageRate: 1.00, minCharge: 1500 },
-          cut2_conventional: { plateCost: 600, flatRate: 1200, flatRateMaxQty: 10000, overageRate: 0.20, minCharge: 1500 },
-          cut2_uv: { plateCost: 600, flatRate: 2000, flatRateMaxQty: 10000, overageRate: 1.50, minCharge: 1500 }
+          cut4_conventional: { name: "เพลทตัด 4 (MO) หมึกคอนเวนชั่นนัล", plateCost: 300, flatRate: 900, flatRateMaxQty: 10000, overageRate: 0.10, minCharge: 900 },
+          cut4_uv: { name: "เพลทตัด 4 (MO) หมึก UV", plateCost: 300, flatRate: 1500, flatRateMaxQty: 1000, overageRate: 1.00, minCharge: 1500 },
+          cut2_conventional: { name: "เพลทตัด 2 (SM74) หมึกคอนเวนชั่นนัล", plateCost: 600, flatRate: 1200, flatRateMaxQty: 10000, overageRate: 0.20, minCharge: 1500 },
+          cut2_uv: { name: "เพลทตัด 2 (SM74) หมึก UV", plateCost: 600, flatRate: 2000, flatRateMaxQty: 10000, overageRate: 1.50, minCharge: 1500 }
         },
         sticker: {
           plateCostPerColor: 300,
