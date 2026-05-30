@@ -107,9 +107,45 @@
 </div>
 <div class="form-actions">
 <button type="submit" class="btn-calc" id="btnCalculate">คำนวณราคา</button>
+<button type="button" class="btn-reset" id="btnOpenOptimizer" style="background:#f0ad4e;color:#fff;">✂️ คำนวณการตัดกระดาษ</button>
 <button type="button" class="btn-reset" id="btnReset">ล้างข้อมูล</button>
 </div>
 </form>
+</section>
+
+<!-- Paper Cutting Optimizer (Hidden by default — opens via button in PressSheet form) -->
+<section class="calc-section hidden" id="paperCutOptimizerSection" aria-label="คำนวณการตัดกระดาษ">
+<div class="result-card">
+<h2 class="result-title">✂️ คำนวณการตัดกระดาษ</h2>
+<p style="color:#666;margin:0 0 1rem;">เลือกขนาดกระดาษโรงงาน — ระบบจะเสนอตัวเลือกการตัดที่ใส่เครื่องพิมพ์ได้</p>
+
+<div class="form-group form-group-row" style="margin-bottom:1rem;">
+<div class="form-field">
+<label for="optFactorySize">ขนาดกระดาษโรงงาน</label>
+<select id="optFactorySize" name="optFactorySize">
+<option value="25x36" selected>25 × 36 นิ้ว (63.5×91.4 ซม.)</option>
+<option value="24x35">24 × 35 นิ้ว (61×88.9 ซม.)</option>
+<option value="31x43">31 × 43 นิ้ว (78.7×109.2 ซม.)</option>
+<option value="19x25">19 × 25 นิ้ว (48.3×63.5 ซม.)</option>
+</select>
+</div>
+<div class="form-field">
+<label for="optMode">เกณฑ์แนะนำ</label>
+<select id="optMode" name="optMode">
+<option value="pieces" selected>ได้ชิ้นต่อใบมากสุด</option>
+<option value="waste">เสียเศษน้อยสุด</option>
+</select>
+</div>
+</div>
+
+<div id="paperCutOptimizerResults" style="overflow-x:auto;">
+<!-- table rendered by Calculator._renderPaperCutOptimizer -->
+</div>
+
+<div class="form-actions" style="margin-top:1rem;">
+<button type="button" class="btn-reset" id="btnCloseOptimizer">ปิด</button>
+</div>
+</div>
 </section>
 
 <!-- Result Display -->
@@ -145,10 +181,10 @@
 </div>
 </footer>
 
-<script src="js/storage.js?v=10"></script>
-<script src="js/validator.js?v=10"></script>
-<script src="js/pricing-engine.js?v=10"></script>
-<script src="js/quotation-printer.js?v=10"></script>
-<script src="js/calculator.js?v=10"></script>
+<script src="js/storage.js?v=11"></script>
+<script src="js/validator.js?v=11"></script>
+<script src="js/pricing-engine.js?v=11"></script>
+<script src="js/quotation-printer.js?v=11"></script>
+<script src="js/calculator.js?v=11"></script>
 </body>
 </html>

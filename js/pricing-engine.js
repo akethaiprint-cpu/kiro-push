@@ -7,27 +7,73 @@ const PricingEngine = {
   /**
    * Press machine specifications — ขนาดรับกระดาษและค่าเพลท
    * Used by calculatePressSheet to validate paper fit and compute plate cost.
+   * Canonical_Orientation: maxWidth ≥ maxHeight AND minWidth ≥ minHeight สำหรับทุก entry
    * @typedef {object} MachineSpec
    * @property {string} name - Display name
-   * @property {number} maxWidth - Max paper width in cm
+   * @property {number} maxWidth - Max paper width in cm (canonical: ≥ maxHeight)
    * @property {number} maxHeight - Max paper height in cm
+   * @property {number} minWidth - Min paper width in cm (canonical: ≥ minHeight)
+   * @property {number} minHeight - Min paper height in cm
    * @property {number} plateCostPerColor - Plate cost per color in baht
    * @property {string} [hint] - Optional hint shown when paper doesn't fit
    */
   MACHINE_SPECS: {
-    'heidelberg_gto46': { name: 'Heidelberg GTO 46',           maxWidth: 46,  maxHeight: 34, plateCostPerColor: 200, plateSize: 'ตัด 8 (เล็ก)',   hint: 'งานเล็ก ปริมาณน้อย รับกระดาษไม่เกิน 46×34 ซม.' },
-    'heidelberg_mo':    { name: 'Heidelberg MO (MOZ/MOV)',     maxWidth: 48,  maxHeight: 65, plateCostPerColor: 300, plateSize: 'ตัด 4 (B2)',    hint: 'B2 นิยมในไทย รับสูงสุด 48×65 ซม. (เช่น 19×25 นิ้ว)' },
-    'heidelberg_movp':  { name: 'Heidelberg MOVP (Perfector)', maxWidth: 48,  maxHeight: 65, plateCostPerColor: 300, plateSize: 'ตัด 4 (B2)',    hint: 'พิมพ์ 2 ด้านรอบเดียว รับสูงสุด 48×65 ซม.' },
-    'heidelberg_sm52':  { name: 'Heidelberg SM52',             maxWidth: 52,  maxHeight: 37, plateCostPerColor: 250, plateSize: 'ตัด 8 (กลาง)', hint: 'รับสูงสุด 52×37 ซม.' },
-    'heidelberg_sm74':  { name: 'Heidelberg SM74',             maxWidth: 74,  maxHeight: 52, plateCostPerColor: 500, plateSize: 'ตัด 2 (B2+)',   hint: 'B2+ สมรรถนะสูง รับสูงสุด 74×52 ซม. (เช่น 24×35, 25×36 นิ้ว)' },
-    'heidelberg_cd102': { name: 'Heidelberg CD102 / XL102',    maxWidth: 102, maxHeight: 72, plateCostPerColor: 600, plateSize: 'ตัด 1 (B1)',    hint: 'B1 รับสูงสุด 102×72 ซม. (เช่น 31×43 นิ้ว)' },
-    'komori_s40':       { name: 'Komori Lithrone S40',         maxWidth: 106, maxHeight: 75, plateCostPerColor: 700, plateSize: 'ตัด 1 (B1)',    hint: 'B1 สมรรถนะสูงสุด รับสูงสุด 106×75 ซม.' },
-    'heidelberg_gto52': { name: 'Heidelberg GTO 52',           maxWidth: 52,  maxHeight: 36, plateCostPerColor: 250, plateSize: 'ตัด 4',         hint: 'งานเล็ก ปริมาณน้อย รับสูงสุด 52×36 ซม. (A3+)' },
-    'heidelberg_sx52':  { name: 'Heidelberg SX52',             maxWidth: 52,  maxHeight: 74, plateCostPerColor: 450, plateSize: 'ตัด 2',         hint: 'B2 รับสูงสุด 52×74 ซม.' },
-    'heidelberg_sx74':  { name: 'Heidelberg SX74',             maxWidth: 53,  maxHeight: 74, plateCostPerColor: 500, plateSize: 'ตัด 2',         hint: 'B2+ สมรรถนะสูง รับสูงสุด 53×74 ซม.' },
-    'heidelberg_xl75':  { name: 'Heidelberg XL75',             maxWidth: 53,  maxHeight: 75, plateCostPerColor: 550, plateSize: 'ตัด 2',         hint: 'B2+ XL series รับสูงสุด 53×75 ซม.' },
-    'heidelberg_xl106': { name: 'Heidelberg XL106',            maxWidth: 75,  maxHeight: 106, plateCostPerColor: 700, plateSize: 'ตัด 1',         hint: 'B1 สมรรถนะสูงสุด รับสูงสุด 75×106 ซม.' },
-    'heidelberg_sx102': { name: 'Heidelberg SX102',            maxWidth: 72,  maxHeight: 102, plateCostPerColor: 650, plateSize: 'ตัด 1',         hint: 'B1 รับสูงสุด 72×102 ซม.' },
+    'heidelberg_gto46': { name: 'Heidelberg GTO 46',           maxWidth: 46,  maxHeight: 34,   minWidth: 14.8, minHeight: 10.5, plateCostPerColor: 200, plateSize: 'ตัด 8 (เล็ก)', hint: 'งานเล็ก ปริมาณน้อย รับ 14.8×10.5 ถึง 46×34 ซม.' },
+    'heidelberg_gto52': { name: 'Heidelberg GTO 52',           maxWidth: 52,  maxHeight: 36,   minWidth: 18,   minHeight: 10.5, plateCostPerColor: 250, plateSize: 'ตัด 4',        hint: 'งานเล็ก A3+ รับ 18×10.5 ถึง 52×36 ซม.' },
+    'heidelberg_mo':    { name: 'Heidelberg MO (MOZ/MOV)',     maxWidth: 65,  maxHeight: 48,   minWidth: 28,   minHeight: 21,   plateCostPerColor: 300, plateSize: 'ตัด 4 (B2)',   hint: 'B2 นิยมในไทย รับ 28×21 ถึง 65×48 ซม. (เช่น 19×25 นิ้ว)' },
+    'heidelberg_movp':  { name: 'Heidelberg MOVP (Perfector)', maxWidth: 65,  maxHeight: 48,   minWidth: 28,   minHeight: 21,   plateCostPerColor: 300, plateSize: 'ตัด 4 (B2)',   hint: 'Perfector พิมพ์ 2 ด้านรอบเดียว รับ 28×21 ถึง 65×48 ซม.' },
+    'heidelberg_sm52':  { name: 'Heidelberg SM52',             maxWidth: 52,  maxHeight: 37,   minWidth: 14.5, minHeight: 10.5, plateCostPerColor: 250, plateSize: 'ตัด 8 (กลาง)', hint: 'รับ 14.5×10.5 ถึง 52×37 ซม.' },
+    'heidelberg_sx52':  { name: 'Heidelberg SX52',             maxWidth: 52,  maxHeight: 37,   minWidth: 14.5, minHeight: 10.5, plateCostPerColor: 450, plateSize: 'ตัด 2',        hint: 'B2 รับ 14.5×10.5 ถึง 52×37 ซม.' },
+    'heidelberg_sm74':  { name: 'Heidelberg SM74',             maxWidth: 74,  maxHeight: 53,   minWidth: 28,   minHeight: 21,   plateCostPerColor: 500, plateSize: 'ตัด 2 (B2+)',  hint: 'B2+ สมรรถนะสูง รับ 28×21 ถึง 74×53 ซม. (เช่น 24×35, 25×36 นิ้ว)' },
+    'heidelberg_sx74':  { name: 'Heidelberg SX74',             maxWidth: 74,  maxHeight: 53,   minWidth: 28,   minHeight: 21,   plateCostPerColor: 500, plateSize: 'ตัด 2',        hint: 'B2+ สมรรถนะสูง รับ 28×21 ถึง 74×53 ซม.' },
+    'heidelberg_xl75':  { name: 'Heidelberg XL75',             maxWidth: 74,  maxHeight: 58.5, minWidth: 35,   minHeight: 28,   plateCostPerColor: 550, plateSize: 'ตัด 2',        hint: 'B2+ XL series รับ 35×28 ถึง 74×58.5 ซม.' },
+    'heidelberg_cd102': { name: 'Heidelberg CD102 / XL102',    maxWidth: 102, maxHeight: 72,   minWidth: 48,   minHeight: 34,   plateCostPerColor: 600, plateSize: 'ตัด 1 (B1)',   hint: 'B1 รับ 48×34 ถึง 102×72 ซม. (เช่น 31×43 นิ้ว)' },
+    'heidelberg_sx102': { name: 'Heidelberg SX102',            maxWidth: 102, maxHeight: 72,   minWidth: 48,   minHeight: 34,   plateCostPerColor: 650, plateSize: 'ตัด 1',        hint: 'B1 รับ 48×34 ถึง 102×72 ซม.' },
+    'heidelberg_xl106': { name: 'Heidelberg XL106',            maxWidth: 105, maxHeight: 75,   minWidth: 48,   minHeight: 34,   plateCostPerColor: 700, plateSize: 'ตัด 1',        hint: 'B1 สมรรถนะสูงสุด รับ 48×34 ถึง 105×75 ซม.' },
+    'komori_s40':       { name: 'Komori Lithrone S40',         maxWidth: 106, maxHeight: 75,   minWidth: 48,   minHeight: 34,   plateCostPerColor: 700, plateSize: 'ตัด 1 (B1)',   hint: 'B1 สมรรถนะสูงสุด รับ 48×34 ถึง 106×75 ซม.' },
+  },
+
+  /**
+   * Legacy plate cost — ค่าเดิมที่อยู่ใน MACHINE_SPECS.plateCostPerColor
+   * Req 14.1
+   */
+  PLATE_COST_LEGACY: {
+    heidelberg_gto46: 200,  heidelberg_gto52: 250,
+    heidelberg_mo:    300,  heidelberg_movp:  300,
+    heidelberg_sm52:  250,  heidelberg_sx52:  450,
+    heidelberg_sm74:  500,  heidelberg_sx74:  500,
+    heidelberg_xl75:  550,
+    heidelberg_cd102: 600,  heidelberg_sx102: 650,
+    heidelberg_xl106: 700,  komori_s40:       700,
+  },
+
+  /**
+   * Datasheet 2025 — ค่าจริงตามที่โรงพิมพ์ใช้
+   * Req 14.1
+   */
+  PLATE_COST_DATASHEET2025: {
+    heidelberg_gto46: 150,  heidelberg_gto52: 150,
+    heidelberg_mo:    300,  heidelberg_movp:  300,
+    heidelberg_sm52:  150,  heidelberg_sx52:  150,
+    heidelberg_sm74:  500,  heidelberg_sx74:  500,
+    heidelberg_xl75:  600,
+    heidelberg_cd102: 600,  heidelberg_sx102: 600,
+    heidelberg_xl106: 1000, komori_s40:       1000,
+  },
+
+  /**
+   * Get active plate cost table from localStorage
+   * Req 14.2, 14.3 — default 'legacy', user สลับโดย localStorage.setItem('tp_plateCostTableMode', 'datasheet2025')
+   * @returns {{name:'legacy'|'datasheet2025', table:object}}
+   */
+  getActivePlateCostTable() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const mode = localStorage.getItem('tp_plateCostTableMode');
+        if (mode === 'datasheet2025') return { name: 'datasheet2025', table: this.PLATE_COST_DATASHEET2025 };
+      }
+    } catch (e) { /* fallback below */ }
+    return { name: 'legacy', table: this.PLATE_COST_LEGACY };
   },
 
   /**
@@ -59,6 +105,37 @@ const PricingEngine = {
       ],
     },
   },
+
+  /**
+   * Spoilage Profiles — กำหนดอัตรากระดาษเสียและขั้นต่ำตามประเภทงาน
+   * Req 12.1–12.6
+   */
+  SPOILAGE_PROFILES: {
+    oneColorRepeat:  { label: '1 สี ซ้ำ',                rate: 0.03, minSheets: 50  },
+    twoColorGeneral: { label: '2 สี ทั่วไป',              rate: 0.05, minSheets: 100 },
+    fourColorRepeat: { label: '4 สี ซ้ำ',                rate: 0.08, minSheets: 100 },
+    fourColorFirst:  { label: '4 สี ครั้งแรก',            rate: 0.10, minSheets: 150 },
+    uvOrPantone:     { label: 'UV / Pantone',           rate: 0.10, minSheets: 100 },
+    specialPaper:    { label: 'กระดาษพิเศษ (สติ๊กเกอร์/PVC)', rate: 0.15, minSheets: 150 },
+  },
+
+  /**
+   * Legacy Job_Type mapping — รองรับ saved quotations จาก spec ก่อนๆ
+   * Req 12.11
+   */
+  LEGACY_JOB_TYPE_MAP: {
+    simple:         'twoColorGeneral',
+    fourColor:      'fourColorRepeat',
+    newJob:         'fourColorFirst',
+    // 'fourColorFirst' จาก enhancement ก่อน → key เดียวกัน (no-op)
+  },
+
+  /**
+   * Perfecting modifier (Req 13.1, 13.4)
+   */
+  PERFECTING_MODIFIER_DEFAULT: 0.025,  // 2.5% midpoint of 2-3%
+  PERFECTING_MODIFIER_MIN: 0.02,
+  PERFECTING_MODIFIER_MAX: 0.03,
 
   /**
    * Quick Select — แนะนำเครื่อง/วิธีพิมพ์/จำนวนสีที่เหมาะสม
@@ -161,6 +238,188 @@ const PricingEngine = {
       const isA4Rotated = Math.abs(pieceSize.width - 29.7) <= 1 && Math.abs(pieceSize.height - 21) <= 1;
       if (!isA4 && !isA4Rotated) return null;
       return '⚠️ งาน A4 ไม่ควรใช้กระดาษ 31×43 นิ้ว เพราะตัดแล้วเสียเศษมาก แนะนำ 24×35 หรือ 25×36 นิ้วแทน';
+    },
+  },
+
+  /**
+   * Paper Cutting Optimizer — คำนวณการตัดกระดาษโรงงานเข้าเครื่องพิมพ์
+   * Pure functions ไม่มี side effects, ไม่แตะ DOM
+   * Req 5–10
+   */
+  PaperCuttingOptimizer: {
+    /**
+     * Factory sheets ที่รองรับ (cm, Canonical_Orientation: width >= height)
+     * Req 5.1, 5.4
+     */
+    FACTORY_SHEETS: {
+      '31x43': { width: 109.22, height: 78.74, label: '31"×43"' },
+      '25x36': { width: 91.44,  height: 63.50, label: '25"×36"' },
+      '24x35': { width: 88.90,  height: 60.96, label: '24"×35"' },
+      '19x25': { width: 63.50,  height: 48.26, label: '19"×25"' },
+    },
+
+    MIN_PIECE_CM: 5,         // Req 6.5
+    MAX_ROWS: 8,             // Req 6.1
+    MAX_COLS: 8,             // Req 6.1
+    MAX_PIECES: 64,          // Req 6.1
+
+    /**
+     * Generate cut plans for a factory sheet
+     * Req 6.1, 6.2, 6.3, 6.4, 6.5, 8.1, 8.2
+     * @param {{width:number, height:number}} factory - Canonical orientation (width >= height)
+     * @returns {Array<object>} Cut_Result list (without compatibleMachines/machineUnusedCm2 yet)
+     */
+    _enumerateCutPlans(factory) {
+      const seen = new Set();
+      const results = [];
+      for (let rows = 1; rows <= this.MAX_ROWS; rows++) {
+        for (let cols = 1; cols <= this.MAX_COLS; cols++) {
+          if (rows * cols > this.MAX_PIECES) continue;
+          // Dedupe transpose: keep only rows >= cols (canonical form)
+          if (rows < cols) continue;
+
+          // Cut produces (factory.width / cols, factory.height / rows) pieces
+          const w = factory.width / cols;
+          const h = factory.height / rows;
+          const cutWidth  = Math.max(w, h);
+          const cutHeight = Math.min(w, h);
+
+          // Exclude pieces too small (Req 6.5)
+          if (cutWidth < this.MIN_PIECE_CM || cutHeight < this.MIN_PIECE_CM) continue;
+
+          const cutsPerSheet = rows * cols;
+          const wasteCm2 = factory.width * factory.height - cutsPerSheet * cutWidth * cutHeight;
+
+          const key = rows + 'x' + cols;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          results.push({
+            rows: rows,
+            cols: cols,
+            cutsPerSheet: cutsPerSheet,
+            cutWidth: cutWidth,
+            cutHeight: cutHeight,
+            wasteCm2: Math.max(wasteCm2, 0),
+            compatibleMachines: [],
+            machineUnusedCm2: null,
+            recommended: false,
+          });
+        }
+      }
+      // Sort by cutsPerSheet ascending so user sees fewer pieces first
+      results.sort(function(a, b) { return a.cutsPerSheet - b.cutsPerSheet; });
+      return results;
+    },
+
+    /**
+     * Filter compatible machines for a cut result, sorted by plateSize
+     * Req 7.1, 7.2
+     * @param {object} cutResult
+     * @param {string[]} targetKeys
+     * @returns {string[]}
+     */
+    _filterCompatibleMachines(cutResult, targetKeys) {
+      const PLATE_ORDER = { 'ตัด 8': 0, 'ตัด 4': 1, 'ตัด 2': 2, 'ตัด 1': 3 };
+      const orderOf = function(key) {
+        const m = PricingEngine.MACHINE_SPECS[key];
+        if (!m || typeof m.plateSize !== 'string') return 99;
+        const match = m.plateSize.match(/ตัด\s*\d+/);
+        if (!match) return 99;
+        const normalized = match[0].replace(/\s+/, ' ');
+        return (PLATE_ORDER[normalized] !== undefined) ? PLATE_ORDER[normalized] : 99;
+      };
+      return targetKeys
+        .filter(function(k) {
+          const m = PricingEngine.MACHINE_SPECS[k];
+          if (!m) return false;
+          const fit = PricingEngine._sheetFitsMachine(
+            { width: cutResult.cutWidth, height: cutResult.cutHeight }, m
+          );
+          return fit.fits;
+        })
+        .sort(function(a, b) { return orderOf(a) - orderOf(b); });
+    },
+
+    /**
+     * Compute unused area on the first compatible machine
+     * Bleed=0.3, Gripper=1.2, SideLay=0.7 (Req 8.3)
+     * @param {object} cutResult
+     * @param {string[]} targetKeys (unused — uses cutResult.compatibleMachines instead)
+     * @returns {number|null}
+     */
+    _computeMachineUnused(cutResult, targetKeys) {
+      if (!cutResult.compatibleMachines || cutResult.compatibleMachines.length === 0) return null;
+      const firstKey = cutResult.compatibleMachines[0];
+      const m = PricingEngine.MACHINE_SPECS[firstKey];
+      if (!m) return null;
+      const usableW = m.maxWidth  - 1.2 - 0.3 * 2;
+      const usableH = m.maxHeight - 0.7 * 2;
+      const usableArea = usableW * usableH;
+      const cutArea = cutResult.cutWidth * cutResult.cutHeight;
+      if (usableArea <= cutArea) return 0;
+      return Math.round((usableArea - cutArea) * 10) / 10; // 1 decimal (Req 8.4)
+    },
+
+    /**
+     * Mark exactly one Cut_Result as recommended based on optimization mode
+     * Req 9.1, 9.2, 9.3, 9.5
+     * @param {Array<object>} results
+     * @param {'pieces'|'waste'} optimizeFor
+     */
+    _markRecommended(results, optimizeFor) {
+      // Reset all flags
+      for (let i = 0; i < results.length; i++) results[i].recommended = false;
+
+      const eligible = results.filter(function(r) {
+        return r.compatibleMachines && r.compatibleMachines.length > 0;
+      });
+      if (eligible.length === 0) return; // Req 9.5
+
+      const winner = eligible.reduce(function(best, r) {
+        if (!best) return r;
+        if (optimizeFor === 'waste') {
+          if (r.wasteCm2 < best.wasteCm2) return r;
+          if (r.wasteCm2 === best.wasteCm2 && r.cutsPerSheet > best.cutsPerSheet) return r;
+        } else {
+          // 'pieces' (default)
+          if (r.cutsPerSheet > best.cutsPerSheet) return r;
+          if (r.cutsPerSheet === best.cutsPerSheet && r.wasteCm2 < best.wasteCm2) return r;
+        }
+        return best;
+      }, null);
+      if (winner) winner.recommended = true;
+    },
+
+    /**
+     * Public optimizer entry point
+     * Req 5.1, 5.2, 5.3, 5.4, 5.5, 7.3, 9.1, 9.5
+     * @param {string} factoryKey - one of FACTORY_SHEETS keys
+     * @param {string[]} [targetMachineKeys] - empty = use all machines
+     * @param {'pieces'|'waste'} [optimizeFor='pieces']
+     * @returns {{success:boolean, factory?:object, results?:Array<object>, error?:string}}
+     */
+    optimize(factoryKey, targetMachineKeys, optimizeFor) {
+      const factory = this.FACTORY_SHEETS[factoryKey];
+      if (!factory) {
+        // Req 5.5
+        return { success: false, error: 'ไม่รู้จักขนาดกระดาษ ' + factoryKey };
+      }
+
+      const targets = (targetMachineKeys && targetMachineKeys.length > 0)
+        ? targetMachineKeys.slice()
+        : Object.keys(PricingEngine.MACHINE_SPECS); // Req 5.3
+
+      const mode = (optimizeFor === 'waste') ? 'waste' : 'pieces';
+
+      const results = this._enumerateCutPlans(factory);
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        r.compatibleMachines = this._filterCompatibleMachines(r, targets);
+        r.machineUnusedCm2 = this._computeMachineUnused(r, targets);
+      }
+      this._markRecommended(results, mode);
+      return { success: true, factory: factory, results: results };
     },
   },
 
@@ -847,6 +1106,36 @@ const PricingEngine = {
   // ─── Helper Functions ───────────────────────────────────────────────
 
   /**
+   * Pure function ตรวจว่า sheet ใส่ machine ได้ไหม (ลอง 2 orientation)
+   * @param {{width:number, height:number}} sheet - cm
+   * @param {object} machine - MachineSpec มี maxWidth, maxHeight, minWidth, minHeight
+   * @returns {{fits:boolean, reason:'tooSmall'|'tooLarge'|null, orientation:'normal'|'rotated'|null}}
+   */
+  _sheetFitsMachine(sheet, machine) {
+    const w = Number(sheet.width);
+    const h = Number(sheet.height);
+    if (!Number.isFinite(w) || !Number.isFinite(h) || !machine) {
+      return { fits: false, reason: 'tooSmall', orientation: null };
+    }
+    const fitsNormal = (
+      w <= machine.maxWidth  && w >= machine.minWidth  &&
+      h <= machine.maxHeight && h >= machine.minHeight
+    );
+    const fitsRotated = (
+      h <= machine.maxWidth  && h >= machine.minWidth  &&
+      w <= machine.maxHeight && w >= machine.minHeight
+    );
+    if (fitsNormal)  return { fits: true,  reason: null, orientation: 'normal'  };
+    if (fitsRotated) return { fits: true,  reason: null, orientation: 'rotated' };
+
+    // Determine why it failed
+    const tooLargeNormal  = w > machine.maxWidth  || h > machine.maxHeight;
+    const tooLargeRotated = h > machine.maxWidth  || w > machine.maxHeight;
+    if (tooLargeNormal && tooLargeRotated) return { fits: false, reason: 'tooLarge',  orientation: null };
+    return { fits: false, reason: 'tooSmall', orientation: null };
+  },
+
+  /**
    * Press Sheet calculation — คำนวณใบพิมพ์
    * คำนวณจำนวนชิ้นต่อใบพิมพ์, ใบพิมพ์ขั้นต่ำ, spoilage, ใบพิมพ์รวม, ต้นทุนกระดาษ, ค่าเพลท, ราคารวม
    * @param {string} productType - Ignored (single product type)
@@ -895,13 +1184,19 @@ const PricingEngine = {
       return this._errorResult('pressSheet', productType, specs, 'ไม่พบเครื่องพิมพ์ที่เลือก');
     }
 
-    // Check if paper fits the press (check both orientations)
-    const fitsNormal = (sheet.width <= press.maxWidth && sheet.height <= press.maxHeight);
-    const fitsRotated = (sheet.height <= press.maxWidth && sheet.width <= press.maxHeight);
-    if (!fitsNormal && !fitsRotated) {
-      const hint = press.hint ? ' — ' + press.hint : '';
+    // Check if paper fits the press (Req 3, 4 — uses _sheetFitsMachine helper)
+    const fit = this._sheetFitsMachine({ width: sheet.width, height: sheet.height }, press);
+    if (!fit.fits) {
+      if (fit.reason === 'tooSmall') {
+        // Req 3.3 template
+        return this._errorResult('pressSheet', productType, specs,
+          'กระดาษเล็กเกินไปสำหรับ ' + press.name +
+          ' (ต้องอย่างน้อย ' + press.minWidth + '×' + press.minHeight + ' ซม.)');
+      }
+      // Req 4.3 template
       return this._errorResult('pressSheet', productType, specs,
-        '⚠️ กระดาษ ' + sheet.name + ' (' + sheet.width.toFixed(1) + '×' + sheet.height.toFixed(1) + ' ซม.) ไม่สามารถใช้กับ ' + press.name + ' ได้' + hint);
+        'กระดาษ ' + sheet.width.toFixed(1) + '×' + sheet.height.toFixed(1) + ' ซม. ใหญ่เกินกว่า ' + press.name +
+        ' รองรับ (สูงสุด ' + press.maxWidth + '×' + press.maxHeight + ' ซม.)');
     }
 
     // Look up paper price per kg using existing paper price table
@@ -949,30 +1244,52 @@ const PricingEngine = {
       return this._errorResult('pressSheet', productType, specs, 'ชิ้นงานใหญ่เกินกว่าจะวางบนกระดาษที่เลือกได้');
     }
 
-    // Spoilage percentage based on job type
-    const spoilageRates = {
-      'simple': 0.05,         // งาน 1-2 สี = 5%
-      'fourColor': 0.08,      // งาน 4 สี = 8%
-      'fourColorFirst': 0.10, // งาน 4 สี ครั้งแรก = 10% (Req 6.3)
-      'newJob': 0.10,         // งานใหม่ = 10%
-    };
-    const SPOILAGE_MIN_SHEETS = 300; // ขั้นต่ำกระดาษเสีย (Req 6.5)
-    const spoilageRate = spoilageRates[jobType] || 0.05;
+    // Spoilage profile (Req 12) — resolve via legacy map for backwards compat (Req 12.11)
+    const resolvedJobType = this.LEGACY_JOB_TYPE_MAP[jobType] || jobType;
+    const profile = this.SPOILAGE_PROFILES[resolvedJobType] || this.SPOILAGE_PROFILES.twoColorGeneral;
+
+    // Perfecting modifier (Req 13.1)
+    let perfectingExtra = 0;
+    let perfectingApplied = false;
+    if (specs.printMethod === 'perfector') {
+      perfectingExtra = this.PERFECTING_MODIFIER_DEFAULT;
+      perfectingApplied = true;
+      // Override (Req 13.4)
+      if (specs.perfectingModifierOverride !== undefined &&
+          specs.perfectingModifierOverride !== null &&
+          specs.perfectingModifierOverride !== '') {
+        const m = Number(specs.perfectingModifierOverride);
+        if (!Number.isFinite(m) || m < this.PERFECTING_MODIFIER_MIN || m > this.PERFECTING_MODIFIER_MAX) {
+          // Req 13.5
+          return this._errorResult('pressSheet', productType, specs,
+            'Perfecting Modifier ต้องอยู่ระหว่าง ' +
+            (this.PERFECTING_MODIFIER_MIN * 100).toFixed(0) + '–' +
+            (this.PERFECTING_MODIFIER_MAX * 100).toFixed(0) + '% (เช่น 0.025 = 2.5%)');
+        }
+        perfectingExtra = m;
+      }
+    }
+    const effectiveRate = profile.rate + perfectingExtra;
 
     // Minimum press sheets (before spoilage)
     const minSheets = Math.ceil(quantity / piecesPerSheet);
 
-    // Spoilage with 300-sheet minimum (Req 6.5–6.6)
-    const spoilageRaw = Math.ceil(minSheets * spoilageRate);
-    const spoilageSheets = Math.max(spoilageRaw, SPOILAGE_MIN_SHEETS);
+    // Spoilage with profile.minSheets minimum (Req 12.8)
+    const spoilageRaw = Math.ceil(minSheets * effectiveRate);
+    const spoilageSheets = Math.max(spoilageRaw, profile.minSheets);
     const totalSheets = minSheets + spoilageSheets;
-    const spoilageHitMin = (spoilageRaw < SPOILAGE_MIN_SHEETS); // true ถ้าใช้ขั้นต่ำ
+    const spoilageHitMin = (spoilageRaw < profile.minSheets);
+    const spoilageRate = effectiveRate;  // alias for label below
 
-    // Plate cost = ค่าเพลทต่อสี × จำนวนสี × (Sheetwise=2, อื่นๆ=1)
+    // Plate cost — lookup จาก active table (Req 14.2, 14.3)
     const colors = colorCount || 1;
     const method = printMethod || 'single';
     const plateSets = (method === 'sheetwise') ? 2 : 1;
-    const plateCost = press.plateCostPerColor * colors * plateSets;
+    const activePlateTable = this.getActivePlateCostTable();
+    const platePerColor = (activePlateTable.table[pressType] !== undefined)
+      ? activePlateTable.table[pressType]
+      : press.plateCostPerColor;  // fallback (Req 15.5)
+    const plateCost = platePerColor * colors * plateSets;
 
     // Print Cost (Req 7) — คำนวณค่าพิมพ์จากตาราง Heidelberg
     const inkType = (specs.inkType === 'uv') ? 'uv' : 'conventional';
@@ -1010,12 +1327,19 @@ const PricingEngine = {
       { label: 'ชิ้น/ใบพิมพ์', amount: piecesPerSheet, conditional: false, unit: 'ชิ้น' },
       { label: 'จำนวนพิมพ์', amount: quantity, conditional: false, unit: 'ชิ้น' },
       { label: 'ใบพิมพ์ขั้นต่ำ', amount: minSheets, conditional: false, unit: 'ใบพิมพ์' },
-      { label: 'กระดาษเสีย (Spoilage ' + (spoilageRate * 100).toFixed(0) + '%)', amount: spoilageSheets, conditional: false, unit: 'ใบพิมพ์' },
+      {
+        label: 'กระดาษเสีย ' + profile.label + ' (Spoilage ' + (effectiveRate * 100).toFixed(1) + '%)' +
+               (perfectingApplied ? ' + Perfecting ' + (perfectingExtra * 100).toFixed(1) + '%' : ''),
+        amount: spoilageSheets, conditional: false, unit: 'ใบพิมพ์'
+      },
       { label: 'ใบพิมพ์รวม', amount: totalSheets, conditional: false, unit: 'ใบพิมพ์' },
       { label: 'น้ำหนักต่อใบพิมพ์', amount: weightPerSheetGrams, conditional: false, unit: 'กรัม' },
       { label: 'น้ำหนักรวม', amount: totalWeightKg, conditional: false, unit: 'กก.' },
       { label: 'จำนวนสี', amount: colors, conditional: false, unit: 'สี' },
-      { label: 'ค่าเพลท (' + press.plateCostPerColor + ' × ' + colors + ' สี × ' + plateSets + ' ชุด)', amount: plateCost, conditional: false },
+      {
+        label: 'ค่าเพลท (' + activePlateTable.name + ': ' + platePerColor + ' × ' + colors + ' สี × ' + plateSets + ' ชุด)',
+        amount: plateCost, conditional: false
+      },
       { label: 'ต้นทุนกระดาษ', amount: paperCost, conditional: false },
       { label: 'ราคาขายกระดาษ (+20%)', amount: paperSellingPrice, conditional: false },
       { label: 'ประเภทหมึก', amount: 0, conditional: false,
@@ -1025,14 +1349,14 @@ const PricingEngine = {
       { label: 'ราคารวมทั้งหมด', amount: totalAmount, conditional: false },
     ];
 
-    // Insert note for 300-sheet minimum after Spoilage row (Req 6.8)
+    // Insert note for spoilage minimum after Spoilage row (Req 12.9)
     if (spoilageHitMin) {
       const spoilageIdx = costBreakdown.findIndex(item =>
         typeof item.label === 'string' && item.label.startsWith('กระดาษเสีย'));
       if (spoilageIdx >= 0) {
         costBreakdown.splice(spoilageIdx + 1, 0, {
           label: '  หมายเหตุ', amount: 0, conditional: false,
-          text: 'ใช้ขั้นต่ำกระดาษเสีย 300 ใบ'
+          text: 'ใช้ขั้นต่ำกระดาษเสีย ' + profile.minSheets + ' ใบ'
         });
       }
     }
@@ -1073,6 +1397,14 @@ const PricingEngine = {
         printCost: printCost,
         inkType: inkType,
         plateClassUsed: printCostResult.plateClassUsed,
+        // NEW (Req 12, 13, 14)
+        spoilageProfile: resolvedJobType,
+        spoilageRate: profile.rate,
+        effectiveSpoilageRate: effectiveRate,
+        perfectingApplied: perfectingApplied,
+        perfectingExtra: perfectingExtra,
+        plateCostTableName: activePlateTable.name,
+        platePerColor: platePerColor,
       },
       error: null
     };
