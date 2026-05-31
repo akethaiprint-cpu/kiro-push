@@ -275,10 +275,11 @@ const PricingEngine = {
       for (let rows = 1; rows <= this.MAX_ROWS; rows++) {
         for (let cols = 1; cols <= this.MAX_COLS; cols++) {
           if (rows * cols > this.MAX_PIECES) continue;
-          // Dedupe transpose: keep only rows >= cols (canonical form)
-          if (rows < cols) continue;
 
-          // Cut produces (factory.width / cols, factory.height / rows) pieces
+          // Cut produces (factory.width / cols, factory.height / rows) pieces.
+          // NOTE: (rows,cols) and (cols,rows) yield DIFFERENT piece geometries
+          // (cols divides width, rows divides height), so they are NOT transposes.
+          // Both are valid production layouts and must be kept (Req 10.1).
           const w = factory.width / cols;
           const h = factory.height / rows;
           const cutWidth  = Math.max(w, h);
@@ -290,7 +291,10 @@ const PricingEngine = {
           const cutsPerSheet = rows * cols;
           const wasteCm2 = factory.width * factory.height - cutsPerSheet * cutWidth * cutHeight;
 
-          const key = rows + 'x' + cols;
+          // Dedupe by resulting piece geometry + count (Canonical_Orientation,
+          // Req 6.2/6.4): two plans that produce the same canonical piece size
+          // AND the same number of pieces are true duplicates.
+          const key = cutWidth.toFixed(2) + 'x' + cutHeight.toFixed(2) + 'x' + cutsPerSheet;
           if (seen.has(key)) continue;
           seen.add(key);
 
