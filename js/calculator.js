@@ -421,7 +421,20 @@ const Calculator = {
    * Collects form data, validates, calculates price, and displays result or errors
    */
   handleSubmit() {
-    if (!this.currentSystem || !this.currentProduct) return;
+    if (!this.currentSystem) return;
+
+    // กันกรณี currentProduct ยังไม่ถูกตั้งค่า (เช่น ระบบสินค้าเดียวที่ยังไม่ได้ auto-select)
+    // ลองเลือกสินค้าตัวแรกให้อัตโนมัติ ถ้ายังไม่ได้ค่อยแจ้งเตือน (ไม่ปล่อยให้เงียบ)
+    if (!this.currentProduct) {
+      const products = this.PRODUCT_TYPES[this.currentSystem];
+      if (products && products.length === 1) {
+        this.selectProduct(products[0].key);
+      }
+      if (!this.currentProduct) {
+        this.renderError([{ field: 'form', message: 'กรุณาเลือกประเภทสินค้าก่อนกดคำนวณ' }]);
+        return;
+      }
+    }
 
     // Collect form data
     const inputData = this._collectFormData();
@@ -569,6 +582,12 @@ const Calculator = {
     productGrid.innerHTML = products.map((p) =>
       `<button type="button" class="product-btn" data-product="${p.key}" aria-pressed="false">${p.name}</button>`
     ).join('');
+
+    // ระบบที่มีสินค้าเดียว (เช่น คำนวณใบพิมพ์, คำนวณราคากระดาษ) — เลือกให้อัตโนมัติ
+    // เพื่อให้ฟอร์มโผล่ทันทีและกดคำนวณได้เลย (กัน currentProduct เป็น null → กดแล้วเงียบ)
+    if (products.length === 1) {
+      this.selectProduct(products[0].key);
+    }
   },
 
   /**
