@@ -162,6 +162,32 @@ const PricingEngine = {
   },
 
   /**
+   * คืนราคาวัสดุต่อ ตร.ซม. — รองรับ 2 แบบ
+   * (1) วัสดุปกติ: ใช้ pricePerSqCm ที่กำหนดไว้ตรงๆ
+   * (2) แผ่นพลาสติกไม่มีกาว: คิดจากน้ำหนัก
+   *     ราคา/ตร.ซม. = (ความหนา_ซม. × ค่าถ่วง × ราคา/กก.) ÷ 1000
+   *     โดย ความหนา_ซม. = thicknessMm ÷ 10
+   *     (มี field: density [g/cm³], thicknessMm [มม.], pricePerKg [บาท/กก.])
+   * @param {object} materialData
+   * @returns {number|null} ราคาต่อ ตร.ซม. หรือ null ถ้าข้อมูลไม่พอ
+   */
+  _materialPricePerSqCm(materialData) {
+    if (!materialData) return null;
+    // แผ่นพลาสติกคิดตามน้ำหนัก
+    if (materialData.density && materialData.thicknessMm && materialData.pricePerKg) {
+      const thicknessCm = materialData.thicknessMm / 10;
+      // น้ำหนักต่อ 1 ตร.ซม. (กรัม) = พื้นที่(1) × ความหนา_ซม. × ค่าถ่วง
+      const gramsPerSqCm = thicknessCm * materialData.density;
+      // ราคา/ตร.ซม. = น้ำหนัก(กรัม) ÷ 1000 × ราคา/กก.
+      return (gramsPerSqCm / 1000) * materialData.pricePerKg;
+    }
+    if (typeof materialData.pricePerSqCm === 'number') {
+      return materialData.pricePerSqCm;
+    }
+    return null;
+  },
+
+  /**
    * Legacy Job_Type mapping — รองรับ saved quotations จาก spec ก่อนๆ
    * Req 12.11
    */
@@ -826,10 +852,15 @@ const PricingEngine = {
       // paperCost = pricePerSqCm × area × qty
       const area = this.calculateArea(size.width, size.height);
       const materialData = productTable.materials && productTable.materials[material];
-      if (!materialData || !materialData.pricePerSqCm) {
+      if (!materialData) {
         return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาวัสดุที่เลือก');
       }
-      paperCost = materialData.pricePerSqCm * area * quantity;
+      // แผ่นพลาสติกไม่มีกาว: คิดราคาตามน้ำหนัก (ค่าถ่วง × ความหนา × ราคา/กก.)
+      const effPricePerSqCm = this._materialPricePerSqCm(materialData);
+      if (effPricePerSqCm === null) {
+        return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาวัสดุที่เลือก');
+      }
+      paperCost = effPricePerSqCm * area * quantity;
       paperLabel = 'ค่าวัสดุ';
     } else if (productType === 'box') {
       // paperCost = pricePerSqCm × surfaceArea × qty

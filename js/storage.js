@@ -99,10 +99,10 @@ const StorageManager = {
             pvc: { name: "สติกเกอร์ PVC", pricePerSqCm: 0.004 },
             pp: { name: "สติกเกอร์ PP", pricePerSqCm: 0.004 },
             pet: { name: "สติกเกอร์ PET", pricePerSqCm: 0.005 },
-            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", pricePerSqCm: 0.015 },
-            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", pricePerSqCm: 0.020 },
-            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", pricePerSqCm: 0.025 },
-            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", pricePerSqCm: 0.030 },
+            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.2, pricePerKg: 80 },
+            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.3, pricePerKg: 80 },
+            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.4, pricePerKg: 80 },
+            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.5, pricePerKg: 80 },
             foil: { name: "ฟอยล์", pricePerSqCm: 0.006 }
           }
         },
@@ -189,10 +189,10 @@ const StorageManager = {
             pvc: { name: "สติกเกอร์ PVC", pricePerSqCm: 0.012 },
             pp: { name: "สติกเกอร์ PP", pricePerSqCm: 0.010 },
             pet: { name: "สติกเกอร์ PET", pricePerSqCm: 0.015 },
-            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", pricePerSqCm: 0.015 },
-            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", pricePerSqCm: 0.020 },
-            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", pricePerSqCm: 0.025 },
-            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", pricePerSqCm: 0.030 }
+            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.2, pricePerKg: 80 },
+            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.3, pricePerKg: 80 },
+            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.4, pricePerKg: 80 },
+            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.5, pricePerKg: 80 }
           }
         }
       },
@@ -212,10 +212,10 @@ const StorageManager = {
             stickerPaper: { name: "สติกเกอร์กระดาษ", pricePerSqCm: 0.010 },
             pvc: { name: "สติกเกอร์ PVC", pricePerSqCm: 0.014 },
             pp: { name: "สติกเกอร์ PP", pricePerSqCm: 0.012 },
-            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", pricePerSqCm: 0.015 },
-            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", pricePerSqCm: 0.020 },
-            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", pricePerSqCm: 0.025 },
-            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", pricePerSqCm: 0.030 }
+            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.2, pricePerKg: 80 },
+            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.3, pricePerKg: 80 },
+            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.4, pricePerKg: 80 },
+            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.5, pricePerKg: 80 }
           },
           finishing: {
             laminate: { name: "เคลือบลามิเนต", pricePerSqCm: 0.003 },
@@ -237,10 +237,10 @@ const StorageManager = {
             stickerPaper: { name: "สติกเกอร์กระดาษ", pricePerSqCm: 0.010 },
             pvc: { name: "สติกเกอร์ PVC", pricePerSqCm: 0.014 },
             pp: { name: "สติกเกอร์ PP", pricePerSqCm: 0.012 },
-            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", pricePerSqCm: 0.015 },
-            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", pricePerSqCm: 0.020 },
-            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", pricePerSqCm: 0.025 },
-            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", pricePerSqCm: 0.030 }
+            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.2, pricePerKg: 80 },
+            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.3, pricePerKg: 80 },
+            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.4, pricePerKg: 80 },
+            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.5, pricePerKg: 80 }
           },
           finishing: {
             laminate: { name: "เคลือบลามิเนต", pricePerSqCm: 0.003 },
@@ -342,10 +342,10 @@ const StorageManager = {
             pp: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSqCm: 0.004 },
             pet: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSqCm: 0.005 },
             stickerPaper: { name: "สติกเกอร์กระดาษ (หมึก UV)", pricePerSqCm: 0.004 },
-            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", pricePerSqCm: 0.015 },
-            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", pricePerSqCm: 0.020 },
-            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", pricePerSqCm: 0.025 },
-            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", pricePerSqCm: 0.030 },
+            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.2, pricePerKg: 80 },
+            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.3, pricePerKg: 80 },
+            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.4, pricePerKg: 80 },
+            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.5, pricePerKg: 80 },
             foil: { name: "ฟอยล์", pricePerSqCm: 0.006 }
           },
           finishing: {
@@ -369,10 +369,10 @@ const StorageManager = {
             stickerPVC: { name: "สติกเกอร์ PVC", pricePerSqCm: 0.010 },
             stickerPP: { name: "สติกเกอร์ PP", pricePerSqCm: 0.008 },
             stickerPET: { name: "สติกเกอร์ PET", pricePerSqCm: 0.012 },
-            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", pricePerSqCm: 0.015 },
-            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", pricePerSqCm: 0.020 },
-            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", pricePerSqCm: 0.025 },
-            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", pricePerSqCm: 0.030 }
+            plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.2, pricePerKg: 80 },
+            plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.3, pricePerKg: 80 },
+            plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.4, pricePerKg: 80 },
+            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.5, pricePerKg: 80 }
           },
           finishing: {
             laminate: { name: "เคลือบลามิเนต", pricePerSqCm: 0.002 },
