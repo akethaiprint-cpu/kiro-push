@@ -1085,21 +1085,21 @@ const Calculator = {
       </div>
       <div class="form-group">
         <div class="form-field">
-          <label for="inputSides">จำนวนหน้า</label>
+          <label for="inputSides">จำนวนหน้าที่พิมพ์</label>
           <select id="inputSides" name="sides" required>
-            <option value="1" selected>1 หน้า (พิมพ์หน้าเดียว)</option>
-            <option value="2">2 หน้า (พิมพ์สองหน้า)</option>
+            <option value="1" selected>พิมพ์หน้าเดียว (1 หน้า)</option>
+            <option value="2">พิมพ์สองหน้า (หน้า–หลัง)</option>
           </select>
         </div>
       </div>
       <div class="form-group form-group-row">
         <div class="form-field">
-          <label for="inputFrontColors">จำนวนสีด้านหน้า (1–6)</label>
-          <input type="number" id="inputFrontColors" name="frontColors" min="1" max="6" step="1" value="4" placeholder="1–6 สี" required>
+          <label for="inputFrontColors">สีด้านหน้า (จำนวนสี 1–6)</label>
+          <input type="number" id="inputFrontColors" name="frontColors" min="1" max="6" step="1" value="4" placeholder="เช่น 4 = CMYK" required>
         </div>
-        <div class="form-field" id="backColorsField" style="display:none;">
-          <label for="inputBackColors">จำนวนสีด้านหลัง (0–6)</label>
-          <input type="number" id="inputBackColors" name="backColors" min="0" max="6" step="1" placeholder="0–6 สี">
+        <div class="form-field" id="backColorsField">
+          <label for="inputBackColors">สีด้านหลัง (จำนวนสี 0–6)</label>
+          <input type="number" id="inputBackColors" name="backColors" min="0" max="6" step="1" value="0" placeholder="เช่น 1 = ขาว-ดำ" disabled>
         </div>
       </div>
       <div class="form-group">
@@ -1173,16 +1173,25 @@ const Calculator = {
   },
 
   /**
-   * แสดง/ซ่อนช่อง "จำนวนสีด้านหลัง" ตามจำนวนหน้า (Req 3.1, 3.2)
+   * เปิด/ปิดช่อง "สีด้านหลัง" ตามจำนวนหน้า (Req 3.1, 3.2)
+   * ช่องแสดงตลอด แต่ disable เมื่อพิมพ์หน้าเดียว เพื่อให้ผู้ใช้เห็นว่ามีช่องนี้
    * @param {string|number} sides - '1' | '2'
    */
   _togglePressSheetBackColors(sides) {
-    const backField = document.getElementById('backColorsField');
-    if (!backField) return;
-    const isTwoSided = String(sides) === '2';
-    backField.style.display = isTwoSided ? '' : 'none';
     const backEl = document.getElementById('inputBackColors');
-    if (backEl && !isTwoSided) backEl.value = '';
+    const backField = document.getElementById('backColorsField');
+    if (!backEl) return;
+    const isTwoSided = String(sides) === '2';
+    backEl.disabled = !isTwoSided;
+    if (isTwoSided) {
+      // เปลี่ยนเป็น 2 หน้า: ถ้ายังเป็น 0/ว่าง ให้ตั้งค่าเริ่มต้นเป็น 4 (CMYK) เพื่อความสะดวก
+      if (!backEl.value || backEl.value === '0') backEl.value = '4';
+    } else {
+      // หน้าเดียว: สีด้านหลัง = 0
+      backEl.value = '0';
+    }
+    // จางช่องเมื่อปิดใช้งาน
+    if (backField) backField.style.opacity = isTwoSided ? '1' : '0.5';
   },
 
   /**
