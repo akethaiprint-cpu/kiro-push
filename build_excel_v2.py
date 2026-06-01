@@ -743,9 +743,125 @@ ws_q.page_margins.right = 0.4
 ws_q.page_margins.top = 0.5
 ws_q.page_margins.bottom = 0.5
 
+# ============================================================
+# SHEET 9: PlasticPrice (คิดราคาแผ่นพลาสติกตามน้ำหนัก)
+# ============================================================
+ws_pl = wb.create_sheet("PlasticPrice")
+
+ws_pl["A1"] = "วิธีคิดราคาแผ่นพลาสติก (ขายเป็น กก. → คิดต่อแผ่น)"
+ws_pl.merge_cells("A1:F1")
+style_header(ws_pl["A1"])
+ws_pl.row_dimensions[1].height = 28
+
+# สูตร
+ws_pl["A3"] = "สูตร: น้ำหนัก(กรัม) = กว้าง(ซม.) × ยาว(ซม.) × (ความหนา_มม. ÷ 10) × ค่าถ่วง   |   ราคา/แผ่น = น้ำหนัก ÷ 1000 × ราคา/กก."
+ws_pl.merge_cells("A3:F3")
+style_normal(ws_pl["A3"], align="center")
+ws_pl["A3"].fill = INFO_FILL
+
+# ตารางค่าถ่วง
+ws_pl["A5"] = "ค่าถ่วงจำเพาะ (Density) ของพลาสติก"
+ws_pl.merge_cells("A5:C5")
+style_section(ws_pl["A5"])
+for col, h in enumerate(["พลาสติก", "ค่าถ่วง (g/cm³)", "หมายเหตุ"], 1):
+    style_section(ws_pl.cell(row=6, column=col, value=h))
+density_rows = [
+    ("PVC (แข็ง)", 1.40, "นิยมทำการ์ด แข็งแรง"),
+    ("PET", 1.38, "ใส คงรูปดี"),
+    ("PP", 0.905, "เบา ลอยน้ำ ถูกสุด"),
+    ("PS", 1.05, "เปราะ"),
+    ("PC", 1.20, "ทนความร้อน"),
+]
+for i, r in enumerate(density_rows, 7):
+    for col, val in enumerate(r, 1):
+        c = ws_pl.cell(row=i, column=col, value=val)
+        style_normal(c, align="center" if col == 2 else "left")
+        if col == 2:
+            c.number_format = "0.000"
+
+# ── เครื่องคิดเลขราคาต่อแผ่น ──
+ws_pl["A13"] = "เครื่องคิดราคาแผ่นพลาสติก (กรอกช่องเหลือง)"
+ws_pl.merge_cells("A13:F13")
+style_section(ws_pl["A13"])
+
+calc_inputs = [
+    (14, "กว้าง (ซม.)", 21),
+    (15, "ยาว (ซม.)", 29.7),
+    (16, "ความหนา (มม.)", 0.3),
+    (17, "ค่าถ่วง (g/cm³)", 1.40),
+    (18, "ราคา/กก. (บาท)", 80),
+    (19, "จำนวน (แผ่น)", 1000),
+    (20, "กำไร % (markup)", 20),
+]
+for row, label, default in calc_inputs:
+    lbl = ws_pl.cell(row=row, column=1, value=label)
+    style_normal(lbl, bold=True)
+    inp = ws_pl.cell(row=row, column=2, value=default)
+    style_input(inp)
+    ws_pl.merge_cells(f"B{row}:C{row}")
+
+# ผลคำนวณ
+ws_pl["A22"] = "ผลคำนวณ (อัตโนมัติ)"
+ws_pl.merge_cells("A22:F22")
+style_section(ws_pl["A22"])
+
+calc_results = [
+    (23, "ความหนา (ซม.)", "=B16/10", "0.000"),
+    (24, "น้ำหนัก 1 แผ่น (กรัม)", "=B14*B15*B23*B17", "#,##0.00"),
+    (25, "ราคาต้นทุน/แผ่น (บาท)", "=B24/1000*B18", "#,##0.0000"),
+    (26, "ราคาขาย/แผ่น (+กำไร) (บาท)", "=B25*(1+B20/100)", "#,##0.0000"),
+    (27, "น้ำหนักรวม (กก.)", "=B24*B19/1000", "#,##0.00"),
+    (28, "ราคาต้นทุนรวม (บาท)", "=B25*B19", "#,##0.00"),
+    (29, "ราคาขายรวม (บาท)", "=B26*B19", "#,##0.00"),
+]
+for row, label, formula, fmt in calc_results:
+    lbl = ws_pl.cell(row=row, column=1, value=label)
+    style_normal(lbl)
+    f = ws_pl.cell(row=row, column=2, value=formula)
+    if row in (26, 29):
+        style_result(f)
+        f.font = LARGE_GREEN if row == 29 else BOLD
+    else:
+        style_normal(f, align="right")
+    f.number_format = fmt
+    ws_pl.merge_cells(f"B{row}:C{row}")
+
+# ตารางสำเร็จรูป: PVC ราคา 80 บาท/กก. แต่ละความหนา × ขนาดยอดนิยม
+ws_pl["A31"] = "ตารางสำเร็จ — PVC (ค่าถ่วง 1.40, ราคา 80 บาท/กก.) ราคาต้นทุน/แผ่น"
+ws_pl.merge_cells("A31:F31")
+style_section(ws_pl["A31"])
+for col, h in enumerate(["ขนาด", "0.2 มม.", "0.3 มม.", "0.4 มม.", "0.5 มม."], 1):
+    style_section(ws_pl.cell(row=32, column=col, value=h))
+
+def pvc_price(w, h, mm):
+    return round(w * h * (mm/10) * 1.40 / 1000 * 80, 2)
+
+size_rows = [
+    ("A4 (21x29.7)", 21, 29.7),
+    ("A3 (29.7x42)", 29.7, 42),
+    ("31x43 นิ้ว (78.74x109.22)", 78.74, 109.22),
+    ("25x36 นิ้ว (63.5x91.44)", 63.5, 91.44),
+]
+for i, (name, w, h) in enumerate(size_rows, 33):
+    style_normal(ws_pl.cell(row=i, column=1, value=name))
+    for j, mm in enumerate([0.2, 0.3, 0.4, 0.5], 2):
+        c = ws_pl.cell(row=i, column=j, value=pvc_price(w, h, mm))
+        style_normal(c, align="right")
+        c.number_format = "#,##0.00"
+
+ws_pl["A38"] = "หมายเหตุ: ตารางนี้เป็นราคาต้นทุน ราคาขายให้คูณ 1.20 (บวกกำไร 20%)"
+ws_pl.merge_cells("A38:F38")
+style_normal(ws_pl["A38"], align="center")
+ws_pl["A38"].fill = INFO_FILL
+ws_pl["A38"].font = SMALL
+
+widths_pl = [30, 16, 16, 16, 16, 16]
+for col, w in enumerate(widths_pl, 1):
+    ws_pl.column_dimensions[get_column_letter(col)].width = w
+
 # Reorder sheets
 desired = ["Calculator", "Quotation", "Machines", "PrintCost", "Spoilage",
-           "PaperPrice", "PaperCutting", "QuickSelect"]
+           "PaperPrice", "PlasticPrice", "PaperCutting", "QuickSelect"]
 for i, name in enumerate(desired):
     if name in wb.sheetnames:
         idx = wb.sheetnames.index(name)
@@ -753,5 +869,5 @@ for i, name in enumerate(desired):
             wb.move_sheet(name, offset=i - idx)
 
 wb.save("/Users/thaiprint/kiro/ThaiPrint-Pricing-Calculator-v2.xlsx")
-print("✅ All 8 sheets created!")
+print("✅ All 9 sheets created!")
 print(f"Order: {wb.sheetnames}")
