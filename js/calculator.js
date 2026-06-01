@@ -127,9 +127,13 @@ const Calculator = {
         if (e.target.id === 'inputQuantity') {
           this.handleQuantityChange(e.target.value);
         }
+        // กรอกสีด้านหลัง > 0 → สลับเป็นพิมพ์ 2 หน้าอัตโนมัติ
+        if (e.target.id === 'inputBackColors') {
+          this._syncSidesFromBackColors();
+        }
         // Quick Select recompute (debounced) on number input changes (Req 2.1, 3.1, 4.1)
         if (this.currentSystem === 'pressSheet' &&
-            ['inputQuantity', 'inputWidth', 'inputHeight', 'inputColorCount'].includes(e.target.id)) {
+            ['inputQuantity', 'inputWidth', 'inputHeight', 'inputColorCount', 'inputFrontColors', 'inputBackColors'].includes(e.target.id)) {
           this._debounceQuickSelectUpdate();
         }
       });
@@ -852,7 +856,7 @@ const Calculator = {
         </div>
         <div class="form-field" id="backColorsField">
           <label for="inputBackColors">สีด้านหลัง (จำนวนสี)</label>
-          <input type="number" id="inputBackColors" name="backColors" min="0" max="${max}" step="1" value="0" placeholder="เช่น 1 = ขาว-ดำ" disabled>
+          <input type="number" id="inputBackColors" name="backColors" min="0" max="${max}" step="1" value="0" placeholder="0 = ไม่พิมพ์หลัง">
         </div>
       </div>`;
   },
@@ -1110,7 +1114,7 @@ const Calculator = {
         </div>
         <div class="form-field" id="backColorsField">
           <label for="inputBackColors">สีด้านหลัง (จำนวนสี 0–6)</label>
-          <input type="number" id="inputBackColors" name="backColors" min="0" max="6" step="1" value="0" placeholder="เช่น 1 = ขาว-ดำ" disabled>
+          <input type="number" id="inputBackColors" name="backColors" min="0" max="6" step="1" value="0" placeholder="0 = ไม่พิมพ์หลัง">
         </div>
       </div>
       <div class="form-group">
@@ -1190,19 +1194,13 @@ const Calculator = {
    */
   _togglePressSheetBackColors(sides) {
     const backEl = document.getElementById('inputBackColors');
-    const backField = document.getElementById('backColorsField');
     if (!backEl) return;
     const isTwoSided = String(sides) === '2';
-    backEl.disabled = !isTwoSided;
     if (isTwoSided) {
-      // เปลี่ยนเป็น 2 หน้า: ถ้ายังเป็น 0/ว่าง ให้ตั้งค่าเริ่มต้นเป็น 4 (CMYK) เพื่อความสะดวก
       if (!backEl.value || backEl.value === '0') backEl.value = '4';
     } else {
-      // หน้าเดียว: สีด้านหลัง = 0
       backEl.value = '0';
     }
-    // จางช่องเมื่อปิดใช้งาน
-    if (backField) backField.style.opacity = isTwoSided ? '1' : '0.5';
   },
 
   /**
@@ -1212,16 +1210,43 @@ const Calculator = {
    */
   _toggleBackColorsByPrintSides(printSides) {
     const backEl = document.getElementById('inputBackColors');
-    const backField = document.getElementById('backColorsField');
     if (!backEl) return;
     const isTwoSided = (String(printSides) !== '1');
-    backEl.disabled = !isTwoSided;
     if (isTwoSided) {
       if (!backEl.value || backEl.value === '0') backEl.value = '4';
     } else {
       backEl.value = '0';
     }
-    if (backField) backField.style.opacity = isTwoSided ? '1' : '0.5';
+  },
+
+  /**
+   * เมื่อผู้ใช้กรอกสีด้านหลัง > 0 ให้สลับ "วิธีพิมพ์/จำนวนหน้า" เป็น 2 หน้าอัตโนมัติ
+   * ทำงานกับทั้ง inputPrintSides (screen/industrial) และ inputSides (pressSheet)
+   */
+  _syncSidesFromBackColors() {
+    const backEl = document.getElementById('inputBackColors');
+    if (!backEl) return;
+    const back = Number(backEl.value) || 0;
+    // screen / industrialOffset: inputPrintSides
+    const printSidesEl = document.getElementById('inputPrintSides');
+    if (printSidesEl) {
+      if (back > 0 && printSidesEl.value === '1') {
+        printSidesEl.value = '2';  // Sheetwise (พิมพ์ 2 หน้า)
+      } else if (back === 0 && printSidesEl.value !== '1') {
+        printSidesEl.value = '1';
+      }
+    }
+    // pressSheet: inputSides (+ printMethod)
+    const sidesEl = document.getElementById('inputSides');
+    if (sidesEl) {
+      if (back > 0 && sidesEl.value === '1') {
+        sidesEl.value = '2';
+        const pm = document.getElementById('inputPrintMethod');
+        if (pm && pm.value === 'single') pm.value = 'sheetwise';
+      } else if (back === 0 && sidesEl.value === '2') {
+        sidesEl.value = '1';
+      }
+    }
   },
 
   /**
@@ -1618,8 +1643,7 @@ const Calculator = {
     if (inputData.colorCount) {
       const front = Number(inputData.colorCount) || 0;
       const backRaw = inputData.backColors;
-      const twoSided = (inputData.printSides && String(inputData.printSides) !== '1');
-      const back = (twoSided && backRaw !== undefined && backRaw !== '' && backRaw !== null)
+      const back = (backRaw !== undefined && backRaw !== '' && backRaw !== null)
         ? (Number(backRaw) || 0) : 0;
       combinedColors = front + back;
       specs.colorCount = combinedColors > 0 ? combinedColors : front;
@@ -1666,7 +1690,8 @@ const Calculator = {
     // จึงไม่ให้ engine คูณ ×2 ซ้ำ (sheetwise) — บังคับ multiplier = 1
     // (pressSheet มี logic per-side ของตัวเองผ่าน inputPrintMethod ไม่ผ่านบล็อกนี้)
     if ((this.currentSystem === 'screen' || this.currentSystem === 'industrialOffset')
-        && specs.printSides === 2 && combinedColors !== null) {
+        && combinedColors !== null && specs.backColors > 0) {
+      specs.printSides = 2;
       specs.printMethod = 'perSideCombined';
     }
 
