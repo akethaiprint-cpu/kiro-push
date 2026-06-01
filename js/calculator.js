@@ -136,8 +136,15 @@ const Calculator = {
 
       // pressSheet: cascade gsm options when paperType changes + trigger Quick Select
       formSection.addEventListener('change', (e) => {
-        if (!e.target || this.currentSystem !== 'pressSheet') return;
+        if (!e.target) return;
         const id = e.target.id;
+
+        // screen / industrialOffset: วิธีพิมพ์ (printSides) → เปิด/ปิดช่องสีด้านหลัง
+        if (id === 'inputPrintSides') {
+          this._toggleBackColorsByPrintSides(e.target.value);
+        }
+
+        if (this.currentSystem !== 'pressSheet') return;
         if (id === 'inputPaperType') {
           this._updatePressSheetGsmOptions(e.target.value);
           this._handlePressSheetMaterialChange(e.target.value);
@@ -838,10 +845,14 @@ const Calculator = {
     const min = constraints.colorCount.min;
     const max = constraints.colorCount.max;
     return `
-      <div class="form-group">
+      <div class="form-group form-group-row">
         <div class="form-field">
-          <label for="inputColorCount">จำนวนสี</label>
-          <input type="number" id="inputColorCount" name="colorCount" min="${min}" max="${max}" step="1" placeholder="${min}–${max} สี" required>
+          <label for="inputColorCount">สีด้านหน้า (จำนวนสี)</label>
+          <input type="number" id="inputColorCount" name="colorCount" min="${min}" max="${max}" step="1" value="4" placeholder="เช่น 4 = CMYK" required>
+        </div>
+        <div class="form-field" id="backColorsField">
+          <label for="inputBackColors">สีด้านหลัง (จำนวนสี)</label>
+          <input type="number" id="inputBackColors" name="backColors" min="0" max="${max}" step="1" value="0" placeholder="เช่น 1 = ขาว-ดำ" disabled>
         </div>
       </div>`;
   },
@@ -1191,6 +1202,25 @@ const Calculator = {
       backEl.value = '0';
     }
     // จางช่องเมื่อปิดใช้งาน
+    if (backField) backField.style.opacity = isTwoSided ? '1' : '0.5';
+  },
+
+  /**
+   * เปิด/ปิดช่อง "สีด้านหลัง" ตามวิธีพิมพ์ (screen / industrialOffset)
+   * printSides: '1' = หน้าเดียว (ปิด), '2'/'work-and-turn'/'work-and-tumble' = 2 หน้า (เปิด)
+   * @param {string} printSides
+   */
+  _toggleBackColorsByPrintSides(printSides) {
+    const backEl = document.getElementById('inputBackColors');
+    const backField = document.getElementById('backColorsField');
+    if (!backEl) return;
+    const isTwoSided = (String(printSides) !== '1');
+    backEl.disabled = !isTwoSided;
+    if (isTwoSided) {
+      if (!backEl.value || backEl.value === '0') backEl.value = '4';
+    } else {
+      backEl.value = '0';
+    }
     if (backField) backField.style.opacity = isTwoSided ? '1' : '0.5';
   },
 
@@ -1581,8 +1611,21 @@ const Calculator = {
     if (inputData.material) specs.material = inputData.material;
     if (inputData.media) specs.media = inputData.media;
 
-    // Color count
-    if (inputData.colorCount) specs.colorCount = Number(inputData.colorCount);
+    // Color count — รองรับสีด้านหน้า/ด้านหลัง (screen / industrialOffset)
+    // engine คิด plateCost/printCost = colorCount × อัตรา จึงรวมสีหน้า+หลังเป็น colorCount
+    // และตั้ง printMethod ไม่ให้คูณซ้ำ (per-side รวมเองแล้ว)
+    let combinedColors = null;
+    if (inputData.colorCount) {
+      const front = Number(inputData.colorCount) || 0;
+      const backRaw = inputData.backColors;
+      const twoSided = (inputData.printSides && String(inputData.printSides) !== '1');
+      const back = (twoSided && backRaw !== undefined && backRaw !== '' && backRaw !== null)
+        ? (Number(backRaw) || 0) : 0;
+      combinedColors = front + back;
+      specs.colorCount = combinedColors > 0 ? combinedColors : front;
+      specs.frontColors = front;
+      specs.backColors = back;
+    }
 
     // Resolution (inkjet)
     if (inputData.resolution) specs.resolution = inputData.resolution;
@@ -1617,6 +1660,14 @@ const Calculator = {
     } else {
       specs.printSides = 1;
       specs.printMethod = 'single';
+    }
+
+    // screen / industrialOffset: ใช้สีด้านหน้า+หลังรวมเป็น colorCount แล้ว
+    // จึงไม่ให้ engine คูณ ×2 ซ้ำ (sheetwise) — บังคับ multiplier = 1
+    // (pressSheet มี logic per-side ของตัวเองผ่าน inputPrintMethod ไม่ผ่านบล็อกนี้)
+    if ((this.currentSystem === 'screen' || this.currentSystem === 'industrialOffset')
+        && specs.printSides === 2 && combinedColors !== null) {
+      specs.printMethod = 'perSideCombined';
     }
 
     // Paper calculator fields
