@@ -140,9 +140,14 @@ const Calculator = {
         const id = e.target.id;
         if (id === 'inputPaperType') {
           this._updatePressSheetGsmOptions(e.target.value);
+          this._handlePressSheetMaterialChange(e.target.value);
+        }
+        // จำนวนหน้า: แสดง/ซ่อนช่องสีด้านหลัง (Req 3.1, 3.2)
+        if (id === 'inputSides') {
+          this._togglePressSheetBackColors(e.target.value);
         }
         // Trigger Quick Select on relevant field changes (Req 2.1, 3.1, 4.1)
-        if (['inputSheetSize', 'inputColorCount', 'inputPrintMethod', 'inputPressType', 'inputWidth', 'inputHeight', 'inputPaperType'].includes(id)) {
+        if (['inputSheetSize', 'inputColorCount', 'inputFrontColors', 'inputBackColors', 'inputSides', 'inputPrintMethod', 'inputPressType', 'inputWidth', 'inputHeight', 'inputPaperType'].includes(id)) {
           this._triggerQuickSelectUpdate();
         }
       });
@@ -184,33 +189,33 @@ const Calculator = {
         }
       });
 
-      // Apply cut button (delegated) — fill PressSheet form + close optimizer
+      // Apply cut button (delegated) — ป้อนค่าเข้าฟอร์ม pressSheet แล้วคำนวณใหม่ทันที (Req 2.1, 2.2, 2.3)
       optSection.addEventListener('click', (e) => {
         if (!e.target || !e.target.classList.contains('btn-apply-cut')) return;
-        const cutW = parseFloat(e.target.getAttribute('data-cut-w'));
-        const cutH = parseFloat(e.target.getAttribute('data-cut-h'));
+        const factoryKey = e.target.getAttribute('data-factory');
         const press = e.target.getAttribute('data-press');
-        if (Number.isFinite(cutW) && Number.isFinite(cutH)) {
-          // Note: cut size is the PRESS SHEET size that goes into machine, not the printed-piece size
-          // Spec Req 11.3: fill Paper_Sheet width/height with cutWidth/cutHeight
-          // But our PressSheet form has inputWidth/inputHeight = printed-piece size, and inputSheetSize = factory paper key
-          // The closest semantic match: assume the user wants the cut to BE the new sheet size
-          // Since our sheet sizes are limited dropdown (31x43/25x36/24x35), we update the inputs to closest factory size
-          // and switch press machine — Req 11.3 + 11.4 (preserve other fields)
-          const inputPressType = document.getElementById('inputPressType');
-          if (inputPressType && press) {
-            inputPressType.value = press;
-            // Trigger Quick Select update if it's wired
-            if (typeof this._triggerQuickSelectUpdate === 'function') {
-              this._triggerQuickSelectUpdate();
-            }
-          }
-          // Show alert with the cut info — user can adjust manually (cut size != predefined sheet size)
-          alert('เลือกการตัด: ' + cutW.toFixed(1) + ' × ' + cutH.toFixed(1) + ' ซม.\nเครื่อง: ' + (PricingEngine.MACHINE_SPECS[press] ? PricingEngine.MACHINE_SPECS[press].name : press) + '\n\n(หมายเหตุ: ขนาดที่เลือกเป็น "ใบพิมพ์หลังตัด" — ระบบจะใช้ค่านี้เป็น sheet size ในการคำนวณ)');
+
+        // ตั้งค่าเครื่องพิมพ์ + ขนาดกระดาษโรงงาน (factory key) ลงในฟอร์ม
+        const inputPressType = document.getElementById('inputPressType');
+        if (inputPressType && press) inputPressType.value = press;
+        const inputSheetSize = document.getElementById('inputSheetSize');
+        if (inputSheetSize && factoryKey) {
+          // ตั้งค่าเฉพาะเมื่อ factoryKey เป็น option ที่มีจริงใน dropdown
+          const hasOption = Array.from(inputSheetSize.options).some(o => o.value === factoryKey);
+          if (hasOption) inputSheetSize.value = factoryKey;
         }
-        // Close optimizer
+
+        // ปิด optimizer
         const section = document.getElementById('paperCutOptimizerSection');
         if (section) section.classList.add('hidden');
+
+        // อัปเดต Quick Select + คำนวณราคาใหม่ทันทีด้วยค่าที่เลือก (ไม่มี alert)
+        if (typeof this._triggerQuickSelectUpdate === 'function') {
+          this._triggerQuickSelectUpdate();
+        }
+        if (this.currentSystem === 'pressSheet' && this.currentProduct) {
+          this.handleSubmit();
+        }
       });
     }
 
@@ -447,13 +452,24 @@ const Calculator = {
       }
     } else if (this.currentSystem === 'pressSheet') {
       const missing = [];
+      const isSticker = (typeof PricingEngine !== 'undefined' &&
+                         typeof PricingEngine._isStickerMaterial === 'function')
+        ? PricingEngine._isStickerMaterial(inputData.paperType)
+        : false;
       if (!inputData.width || !inputData.height) missing.push('ขนาดชิ้นงาน');
       if (!inputData.sheetSize) missing.push('ขนาดกระดาษ');
       if (!inputData.paperType) missing.push('ชนิดกระดาษ');
-      if (!inputData.gsm) missing.push('แกรม');
+      // สติกเกอร์ไม่ใช้แกรม — เช็คแกรมเฉพาะวัสดุกระดาษ
+      if (!isSticker && !inputData.gsm) missing.push('แกรม');
       if (!inputData.pressType) missing.push('เครื่องพิมพ์');
       if (!inputData.quantity) missing.push('จำนวนพิมพ์');
-      if (!inputData.colorCount) missing.push('จำนวนสี');
+      // จำนวนสี: รับ frontColors (ใหม่) หรือ colorCount (legacy)
+      if (!inputData.frontColors && !inputData.colorCount) missing.push('จำนวนสีด้านหน้า');
+      // งาน 2 หน้าต้องระบุจำนวนสีด้านหลัง (อนุญาต 0)
+      if (String(inputData.sides) === '2' &&
+          (inputData.backColors === undefined || inputData.backColors === null || inputData.backColors === '')) {
+        missing.push('จำนวนสีด้านหลัง');
+      }
       if (missing.length > 0) {
         this.renderError([{ field: 'form', message: 'กรุณากรอกข้อมูลให้ครบ (' + missing.join(', ') + ')' }]);
         return;
@@ -982,6 +998,10 @@ const Calculator = {
     { key: 'greyBack',   name: 'กล่องแป้งหลังเทา' },
     { key: 'kraft',      name: 'คราฟท์' },
     { key: 'cardWhite',  name: 'กระดาษการ์ดขาว' },
+    { key: 'pvcSticker',   name: 'สติกเกอร์ PVC (หมึก UV)' },
+    { key: 'ppSticker',    name: 'สติกเกอร์ PP (หมึก UV)' },
+    { key: 'petSticker',   name: 'สติกเกอร์ PET (หมึก UV)' },
+    { key: 'paperSticker', name: 'สติกเกอร์กระดาษ (หมึก UV)' },
   ],
 
   /**
@@ -1029,6 +1049,7 @@ const Calculator = {
             <option value="31x43">31 × 43 นิ้ว (78.74×109.22 ซม.)</option>
             <option value="25x36">25 × 36 นิ้ว (63.50×91.44 ซม.)</option>
             <option value="24x35">24 × 35 นิ้ว (60.96×88.90 ซม.)</option>
+            <option value="19x25">19 × 25 นิ้ว (48.26×63.50 ซม.)</option>
           </select>
         </div>
       </div>
@@ -1040,7 +1061,7 @@ const Calculator = {
             ${paperTypeOpts}
           </select>
         </div>
-        <div class="form-field">
+        <div class="form-field" id="gsmField">
           <label for="inputGsm">แกรม</label>
           <select id="inputGsm" name="gsm" required disabled>
             <option value="">— เลือกชนิดกระดาษก่อน —</option>
@@ -1064,8 +1085,21 @@ const Calculator = {
       </div>
       <div class="form-group">
         <div class="form-field">
-          <label for="inputColorCount">จำนวนสี (1–4)</label>
-          <input type="number" id="inputColorCount" name="colorCount" min="1" max="4" step="1" placeholder="1–4 สี" required>
+          <label for="inputSides">จำนวนหน้า</label>
+          <select id="inputSides" name="sides" required>
+            <option value="1" selected>1 หน้า (พิมพ์หน้าเดียว)</option>
+            <option value="2">2 หน้า (พิมพ์สองหน้า)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group form-group-row">
+        <div class="form-field">
+          <label for="inputFrontColors">จำนวนสีด้านหน้า (1–6)</label>
+          <input type="number" id="inputFrontColors" name="frontColors" min="1" max="6" step="1" value="4" placeholder="1–6 สี" required>
+        </div>
+        <div class="form-field" id="backColorsField" style="display:none;">
+          <label for="inputBackColors">จำนวนสีด้านหลัง (0–6)</label>
+          <input type="number" id="inputBackColors" name="backColors" min="0" max="6" step="1" placeholder="0–6 สี">
         </div>
       </div>
       <div class="form-group">
@@ -1136,6 +1170,41 @@ const Calculator = {
     const opts = gsms.map(g => `<option value="${g}">${g} แกรม</option>`).join('');
     gsmEl.innerHTML = '<option value="">— เลือกแกรม —</option>' + opts;
     gsmEl.disabled = false;
+  },
+
+  /**
+   * แสดง/ซ่อนช่อง "จำนวนสีด้านหลัง" ตามจำนวนหน้า (Req 3.1, 3.2)
+   * @param {string|number} sides - '1' | '2'
+   */
+  _togglePressSheetBackColors(sides) {
+    const backField = document.getElementById('backColorsField');
+    if (!backField) return;
+    const isTwoSided = String(sides) === '2';
+    backField.style.display = isTwoSided ? '' : 'none';
+    const backEl = document.getElementById('inputBackColors');
+    if (backEl && !isTwoSided) backEl.value = '';
+  },
+
+  /**
+   * เมื่อเปลี่ยนชนิดวัสดุ — ถ้าเป็นสติกเกอร์: ซ่อนช่องแกรม + ตั้งหมึก UV (ยังแก้ได้)
+   * ถ้าเป็นกระดาษ: แสดงช่องแกรม + ตั้งหมึกคอนเวนชั่นนัล (Req 4.2, 4.3, 4.5, 4.6)
+   * @param {string} materialKey
+   */
+  _handlePressSheetMaterialChange(materialKey) {
+    const isSticker = (typeof PricingEngine !== 'undefined' &&
+                       typeof PricingEngine._isStickerMaterial === 'function')
+      ? PricingEngine._isStickerMaterial(materialKey)
+      : false;
+    const gsmField = document.getElementById('gsmField');
+    const gsmEl = document.getElementById('inputGsm');
+    const inkEl = document.getElementById('inputInkType');
+    if (gsmField) gsmField.style.display = isSticker ? 'none' : '';
+    if (gsmEl) {
+      // สติกเกอร์ไม่ใช้แกรม — ปลด required เพื่อไม่บล็อกการคำนวณ
+      gsmEl.required = !isSticker;
+      if (isSticker) gsmEl.value = '';
+    }
+    if (inkEl) inkEl.value = isSticker ? 'uv' : 'conventional';
   },
 
   /**
@@ -1300,7 +1369,7 @@ const Calculator = {
         ? '<span style="color:#999;">—</span>'
         : '<button type="button" class="btn-apply-cut" data-rows="' + r.rows + '" data-cols="' + r.cols +
           '" data-cut-w="' + r.cutWidth.toFixed(2) + '" data-cut-h="' + r.cutHeight.toFixed(2) +
-          '" data-press="' + r.compatibleMachines[0] + '" style="padding:0.3rem 0.6rem;background:#28a745;color:#fff;border:none;border-radius:3px;cursor:pointer;">เลือก</button>';
+          '" data-factory="' + factoryKey + '" data-press="' + r.compatibleMachines[0] + '" style="padding:0.3rem 0.6rem;background:#28a745;color:#fff;border:none;border-radius:3px;cursor:pointer;">เลือก</button>';
       const recommendedBadge = r.recommended
         ? '<span style="background:#ffc107;padding:0.2rem 0.5rem;border-radius:3px;font-weight:bold;">⭐ แนะนำ</span>'
         : '';
@@ -1447,6 +1516,14 @@ const Calculator = {
     const sideLayEl = document.getElementById('inputSideLay');
     if (sideLayEl) data.sideLayOverride = sideLayEl.value;
 
+    // pressSheet: จำนวนหน้า + สีต่อด้าน (Req 3.1, 3.2)
+    const sidesEl = document.getElementById('inputSides');
+    if (sidesEl) data.sides = sidesEl.value;
+    const frontColorsEl = document.getElementById('inputFrontColors');
+    if (frontColorsEl) data.frontColors = frontColorsEl.value;
+    const backColorsEl = document.getElementById('inputBackColors');
+    if (backColorsEl) data.backColors = backColorsEl.value;
+
     // Finishing options (checkboxes)
     const finishingCheckboxes = document.querySelectorAll('input[name="finishing"]:checked');
     data.finishing = Array.from(finishingCheckboxes).map((cb) => cb.value);
@@ -1546,6 +1623,18 @@ const Calculator = {
 
     // pressSheet: inkType (Req 8) — default conventional
     specs.inkType = inputData.inkType === 'uv' ? 'uv' : 'conventional';
+
+    // pressSheet: จำนวนหน้า + สีต่อด้าน (Req 3.1, 3.2, 3.8)
+    // คง specs.colorCount เดิมไว้เป็น fallback ของ engine เมื่อไม่มี frontColors (legacy)
+    if (inputData.sides !== undefined && inputData.sides !== '' && inputData.sides !== null) {
+      specs.sides = Number(inputData.sides);
+    }
+    if (inputData.frontColors !== undefined && inputData.frontColors !== '' && inputData.frontColors !== null) {
+      specs.frontColors = Number(inputData.frontColors);
+    }
+    if (inputData.backColors !== undefined && inputData.backColors !== '' && inputData.backColors !== null) {
+      specs.backColors = Number(inputData.backColors);
+    }
 
     // pressSheet: Gripper / Side Lay overrides (Req 5.4–5.5)
     // Form input หน่วย mm แต่ engine คาดค่า cm → หาร 10

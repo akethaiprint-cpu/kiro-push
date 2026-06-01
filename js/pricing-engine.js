@@ -120,6 +120,48 @@ const PricingEngine = {
   },
 
   /**
+   * Sticker_Material price per square centimeter (บาท/ตร.ซม.)
+   * ใช้คิดต้นทุนวัสดุสติกเกอร์ตามพื้นที่ (Req 4.4, 4.8)
+   * อ้างอิงราคาสติกเกอร์ในระบบสกรีน/industrialOffset (storage.js)
+   */
+  STICKER_PRICE_PER_SQCM: {
+    pvcSticker:   0.010,
+    ppSticker:    0.008,
+    petSticker:   0.012,
+    paperSticker: 0.005,
+  },
+
+  /**
+   * ชื่อแสดงผลของวัสดุสติกเกอร์ (ใช้ใน cost breakdown)
+   */
+  STICKER_LABEL: {
+    pvcSticker:   'สติกเกอร์ PVC',
+    ppSticker:    'สติกเกอร์ PP',
+    petSticker:   'สติกเกอร์ PET',
+    paperSticker: 'สติกเกอร์กระดาษ',
+  },
+
+  /**
+   * Default Ink_Type per material — สติกเกอร์ทั้งหมดใช้หมึก UV เริ่มต้น (Req 4.2, 4.5)
+   */
+  MATERIAL_INK_DEFAULT: {
+    pvcSticker:   'uv',
+    ppSticker:    'uv',
+    petSticker:   'uv',
+    paperSticker: 'uv',
+  },
+
+  /**
+   * คืน true เมื่อ materialKey เป็นวัสดุสติกเกอร์ (มีใน STICKER_PRICE_PER_SQCM)
+   * Req 4.3, 4.4
+   * @param {string} materialKey
+   * @returns {boolean}
+   */
+  _isStickerMaterial(materialKey) {
+    return Object.prototype.hasOwnProperty.call(this.STICKER_PRICE_PER_SQCM, materialKey);
+  },
+
+  /**
    * Legacy Job_Type mapping — รองรับ saved quotations จาก spec ก่อนๆ
    * Req 12.11
    */
@@ -1140,6 +1182,74 @@ const PricingEngine = {
   },
 
   /**
+   * หา Cut_Sheet ที่ดีที่สุดสำหรับตัด Factory_Sheet ให้เข้าเครื่องพิมพ์ที่เลือก
+   * เรียก PaperCuttingOptimizer.optimize() กรองเฉพาะแผนที่ compatibleMachines มี pressType
+   * แล้วเลือกแผนที่ waste น้อยสุด (tie-break: cutsPerSheet มากกว่า)
+   * Req 1.1, 1.2, 1.7
+   * @param {string} factoryKey - หนึ่งใน FACTORY_SHEETS keys
+   * @param {string} pressType - MACHINE_SPECS key ของเครื่องที่เลือก
+   * @param {'waste'|'pieces'} [optimizeFor='waste']
+   * @returns {{cutWidth:number, cutHeight:number, cutsPerParentSheet:number, factory:object, wasteCm2:number}|null}
+   *          null เมื่อ optimize ไม่สำเร็จหรือไม่มีแผน compatible (Req 1.7)
+   */
+  _resolveCutSheet(factoryKey, pressType, optimizeFor = 'waste') {
+    const res = this.PaperCuttingOptimizer.optimize(factoryKey, [pressType], optimizeFor);
+    if (!res || !res.success || !Array.isArray(res.results)) return null;
+    const compatible = res.results.filter(r => r.compatibleMachines && r.compatibleMachines.includes(pressType));
+    if (compatible.length === 0) return null;   // Req 1.7 — no cut fits → caller returns Thai error
+    // เลือก "ใบหลังตัดที่ใหญ่ที่สุด" ที่ยังเข้าเครื่องได้ = จำนวนตัดต่อใบน้อยสุด
+    // (ใช้กระดาษเต็มประสิทธิภาพเครื่อง + ถ้าเต็มแผ่นเข้าเครื่องได้จะได้ 1 ตัด = พฤติกรรมเดิม)
+    // tie-break: waste น้อยกว่า
+    const winner = compatible.reduce((best, r) => {
+      if (!best) return r;
+      if (r.cutsPerSheet < best.cutsPerSheet) return r;
+      if (r.cutsPerSheet === best.cutsPerSheet && r.wasteCm2 < best.wasteCm2) return r;
+      return best;
+    }, null);
+    return {
+      cutWidth: winner.cutWidth,
+      cutHeight: winner.cutHeight,
+      cutsPerParentSheet: winner.cutsPerSheet,
+      factory: res.factory,        // { width, height, label }
+      wasteCm2: winner.wasteCm2,
+    };
+  },
+
+  /**
+   * Normalize จำนวนสีต่อด้านและจำนวนเพลทรวมจาก specs
+   * รองรับ legacy colorCount (→ frontColors, sides=1) และ field ใหม่ sides/frontColors/backColors
+   * - frontColors = specs.frontColors ?? specs.colorCount ?? 1 (clamp ≥ 1 เมื่อ NaN/<1)
+   * - sides = specs.sides ?? (method==='single' ? 1 : 2)
+   * - backColors = (sides===2) ? specs.backColors ?? 0 : 0 (clamp ≥ 0 เมื่อ NaN/<0)
+   * - totalPlates = sides===1 ? frontColors : frontColors + backColors
+   * Req 3.1, 3.2, 3.3, 3.4, 3.5, 3.8
+   * @param {object} specs - { printMethod?, sides?, frontColors?, backColors?, colorCount? }
+   * @returns {{sides:1|2, frontColors:number, backColors:number, totalPlates:number, method:string}}
+   */
+  _resolvePerSideColors(specs) {
+    const method = specs.printMethod || 'single';
+    // frontColors: prefer frontColors, fallback colorCount, default 1 — clamp ≥ 1 (NaN/<1 → 1)
+    const rawFront = (specs.frontColors != null && specs.frontColors !== '')
+      ? specs.frontColors
+      : (specs.colorCount != null && specs.colorCount !== '' ? specs.colorCount : 1);
+    const frontNum = Number(rawFront);
+    const frontColors = (Number.isFinite(frontNum) && frontNum >= 1) ? frontNum : 1;
+    // sides: explicit specs.sides, else infer from printMethod (single → 1, others → 2)
+    let sides = (specs.sides != null && specs.sides !== '') ? Number(specs.sides)
+                : (method === 'single' ? 1 : 2);
+    if (sides !== 2) sides = 1;
+    // backColors: only when sides===2 — clamp ≥ 0 (NaN/<0 → 0)
+    let backColors = 0;
+    if (sides === 2) {
+      const backNum = Number(specs.backColors != null && specs.backColors !== '' ? specs.backColors : 0);
+      backColors = (Number.isFinite(backNum) && backNum >= 0) ? backNum : 0;
+    }
+    // totalPlates: sides=1 → frontColors; sides=2 (any method) → frontColors + backColors
+    const totalPlates = (sides === 1) ? frontColors : (frontColors + backColors);
+    return { sides, frontColors, backColors, totalPlates, method };
+  },
+
+  /**
    * Press Sheet calculation — คำนวณใบพิมพ์
    * คำนวณจำนวนชิ้นต่อใบพิมพ์, ใบพิมพ์ขั้นต่ำ, spoilage, ใบพิมพ์รวม, ต้นทุนกระดาษ, ค่าเพลท, ราคารวม
    * @param {string} productType - Ignored (single product type)
@@ -1162,7 +1272,8 @@ const PricingEngine = {
     if (!paperType) {
       return this._errorResult('pressSheet', productType, specs, 'กรุณาเลือกชนิดกระดาษ');
     }
-    if (!gsm) {
+    const isSticker = this._isStickerMaterial(paperType);
+    if (!isSticker && !gsm) {
       return this._errorResult('pressSheet', productType, specs, 'กรุณาเลือกแกรมกระดาษ');
     }
     if (!pressType) {
@@ -1174,6 +1285,7 @@ const PricingEngine = {
       '31x43': { width: 78.74, height: 109.22, name: '31×43 นิ้ว' },
       '25x36': { width: 63.50, height: 91.44, name: '25×36 นิ้ว' },
       '24x35': { width: 60.96, height: 88.90, name: '24×35 นิ้ว' },
+      '19x25': { width: 63.50, height: 48.26, name: '19×25 นิ้ว' },
     };
 
     const sheet = sheetSizes[sheetSize];
@@ -1182,31 +1294,38 @@ const PricingEngine = {
     }
 
     // Press machine specs (ขนาดรับกระดาษ + ค่าเพลทต่อสี)
-    // hint: คำแนะนำเมื่อใส่ไม่ได้
     const press = PricingEngine.MACHINE_SPECS[pressType];
     if (!press) {
       return this._errorResult('pressSheet', productType, specs, 'ไม่พบเครื่องพิมพ์ที่เลือก');
     }
 
-    // Check if paper fits the press (Req 3, 4 — uses _sheetFitsMachine helper)
-    const fit = this._sheetFitsMachine({ width: sheet.width, height: sheet.height }, press);
-    if (!fit.fits) {
-      if (fit.reason === 'tooSmall') {
-        // Req 3.3 template
-        return this._errorResult('pressSheet', productType, specs,
-          'กระดาษเล็กเกินไปสำหรับ ' + press.name +
-          ' (ต้องอย่างน้อย ' + press.minWidth + '×' + press.minHeight + ' ซม.)');
-      }
-      // Req 4.3 template
+    // ── ตัดกระดาษโรงงานให้พอดีเครื่องอัตโนมัติ (Req 1, 2) ──
+    // sheetSize = Factory_Sheet key; หา Cut_Sheet (ใบหลังตัด) ที่ใหญ่สุดที่เข้าเครื่องได้
+    const cut = this._resolveCutSheet(sheetSize, pressType, 'waste');
+    if (!cut) {
+      // Req 1.7 — ไม่มีแผนตัดที่เข้าเครื่อง
       return this._errorResult('pressSheet', productType, specs,
-        'กระดาษ ' + sheet.width.toFixed(1) + '×' + sheet.height.toFixed(1) + ' ซม. ใหญ่เกินกว่า ' + press.name +
-        ' รองรับ (สูงสุด ' + press.maxWidth + '×' + press.maxHeight + ' ซม.)');
+        'กระดาษ ' + sheet.name + ' ตัดเข้าเครื่อง ' + press.name +
+        ' ไม่ได้ — ลองเลือกขนาดกระดาษหรือเครื่องพิมพ์อื่น');
     }
+    // ใบหลังตัดที่เข้าเครื่อง (เป็นพื้นผิว imposition)
+    const cutWidth = cut.cutWidth;
+    const cutHeight = cut.cutHeight;
+    const cutsPerParentSheet = cut.cutsPerParentSheet;
+    // Factory_Sheet ที่ซื้อจริง (ใช้คิดน้ำหนัก/ต้นทุนกระดาษ)
+    const factoryWidth = cut.factory.width;
+    const factoryHeight = cut.factory.height;
 
-    // Look up paper price per kg using existing paper price table
-    const paperInfo = this.getPaperPricePerKg(paperType, Number(gsm));
-    if (!paperInfo) {
-      return this._errorResult('pressSheet', productType, specs, 'ไม่พบราคากระดาษสำหรับ ' + paperType + ' ' + gsm + ' แกรม');
+    // ── ราคา/ข้อมูลวัสดุ ──
+    // Paper_Material → คิดตามน้ำหนัก/กก. ; Sticker_Material → คิดตามพื้นที่
+    let paperInfo = null;
+    if (!isSticker) {
+      paperInfo = this.getPaperPricePerKg(paperType, Number(gsm));
+      if (!paperInfo) {
+        return this._errorResult('pressSheet', productType, specs, 'ไม่พบราคากระดาษสำหรับ ' + paperType + ' ' + gsm + ' แกรม');
+      }
+    } else if (this.STICKER_PRICE_PER_SQCM[paperType] === undefined) {
+      return this._errorResult('pressSheet', productType, specs, 'ไม่พบราคาสติกเกอร์สำหรับ ' + paperType);
     }
 
     // Default gripper/side lay (Req 5.1–5.3)
@@ -1231,21 +1350,21 @@ const PricingEngine = {
       sideLay = s;
     }
 
-    const printableWidth = sheet.width - gripperMargin;
-    const printableHeight = sheet.height - sideLay;
+    const printableWidth = cutWidth - gripperMargin;
+    const printableHeight = cutHeight - sideLay;
 
     // Bleed allowance: 0.6 cm per axis (3mm per side × 2 sides)
     const bleed = 0.6;
     const pieceWidth = size.width + bleed;
     const pieceHeight = size.height + bleed;
 
-    // Calculate pieces per sheet (try both orientations)
+    // Calculate pieces per sheet (try both orientations) — บน Cut_Sheet (Req 1.3, 1.6)
     const piecesNormal = Math.floor(printableWidth / pieceWidth) * Math.floor(printableHeight / pieceHeight);
     const piecesRotated = Math.floor(printableWidth / pieceHeight) * Math.floor(printableHeight / pieceWidth);
-    const piecesPerSheet = Math.max(piecesNormal, piecesRotated);
+    const nUp = Math.max(piecesNormal, piecesRotated);
 
-    if (piecesPerSheet <= 0) {
-      return this._errorResult('pressSheet', productType, specs, 'ชิ้นงานใหญ่เกินกว่าจะวางบนกระดาษที่เลือกได้');
+    if (nUp <= 0) {
+      return this._errorResult('pressSheet', productType, specs, 'ชิ้นงานใหญ่เกินกว่าจะวางบนใบหลังตัดได้');
     }
 
     // Spoilage profile (Req 12) — resolve via legacy map for backwards compat (Req 12.11)
@@ -1275,60 +1394,126 @@ const PricingEngine = {
     }
     const effectiveRate = profile.rate + perfectingExtra;
 
-    // Minimum press sheets (before spoilage)
-    const minSheets = Math.ceil(quantity / piecesPerSheet);
+    // ── จำนวนหน้า + สีต่อด้าน (Req 3) ──
+    const perSide = this._resolvePerSideColors(specs);
+    const method = perSide.method;
+    const frontColors = perSide.frontColors;
+    const backColors = perSide.backColors;
+    const totalPlates = perSide.totalPlates;
+
+    // ชิ้นสำเร็จต่อใบพิมพ์: W&T / W&Tumble ได้ครึ่งหนึ่ง (หน้า-หลังบนใบเดียว) (Req 3.5)
+    const isWorkAndTurn = (method === 'work-and-turn' || method === 'work-and-tumble');
+    const finishedPiecesPerSheet = isWorkAndTurn ? Math.floor(nUp / 2) : nUp;
+    if (finishedPiecesPerSheet <= 0) {
+      return this._errorResult('pressSheet', productType, specs, 'ชิ้นงานใหญ่เกินกว่าจะวางบนใบหลังตัดได้ (งานหน้าในตัวต้องการอย่างน้อย 2 ชิ้น/ใบ)');
+    }
+
+    // จำนวนใบพิมพ์ (Cut_Sheet) ขั้นต่ำ ก่อน spoilage
+    const minSheets = Math.ceil(quantity / finishedPiecesPerSheet);
 
     // Spoilage with profile.minSheets minimum (Req 12.8)
     const spoilageRaw = Math.ceil(minSheets * effectiveRate);
     const spoilageSheets = Math.max(spoilageRaw, profile.minSheets);
-    const totalSheets = minSheets + spoilageSheets;
+    const printSheetsNeeded = minSheets + spoilageSheets;   // จำนวน Cut_Sheet ที่ต้องพิมพ์
     const spoilageHitMin = (spoilageRaw < profile.minSheets);
-    const spoilageRate = effectiveRate;  // alias for label below
 
-    // Plate cost — lookup จาก active table (Req 14.2, 14.3)
-    const colors = colorCount || 1;
-    const method = printMethod || 'single';
-    const plateSets = (method === 'sheetwise') ? 2 : 1;
+    // จำนวน Factory_Sheet ที่ต้องซื้อ (Req 1.4)
+    const parentSheetCount = Math.ceil(printSheetsNeeded / cutsPerParentSheet);
+
+    // Plate cost — lookup จาก active table (Req 14.2, 14.3) × Total_Plates (Req 3.3–3.5)
     const activePlateTable = this.getActivePlateCostTable();
     const platePerColor = (activePlateTable.table[pressType] !== undefined)
       ? activePlateTable.table[pressType]
-      : press.plateCostPerColor;  // fallback (Req 15.5)
-    const plateCost = platePerColor * colors * plateSets;
+      : press.plateCostPerColor;  // fallback
+    const plateCost = platePerColor * totalPlates;
 
-    // Print Cost (Req 7) — คำนวณค่าพิมพ์จากตาราง Heidelberg
-    const inkType = (specs.inkType === 'uv') ? 'uv' : 'conventional';
-    const printCostResult = this.calculatePrintCost(press.plateSize, inkType, totalSheets, colors, method);
-    const printCost = printCostResult.cost;
+    // Ink type — สติกเกอร์ default UV, กระดาษ default conventional, ผู้ใช้ override ได้ (Req 4.2, 4.5, 4.6)
+    let inkType;
+    if (specs.inkType === 'uv' || specs.inkType === 'conventional') {
+      inkType = specs.inkType;
+    } else {
+      inkType = isSticker ? (this.MATERIAL_INK_DEFAULT[paperType] || 'uv') : 'conventional';
+    }
 
-    // Paper cost calculation
-    // น้ำหนักต่อใบ (กรัม) = (กว้าง × ยาว × แกรม) ÷ 10,000
-    const weightPerSheetGrams = (sheet.width * sheet.height * Number(gsm)) / 10000;
-    // น้ำหนักรวม (กก.) = น้ำหนักต่อใบ × ใบพิมพ์รวม ÷ 1000
-    const totalWeightKg = (weightPerSheetGrams * totalSheets) / 1000;
-    // ต้นทุนกระดาษ = น้ำหนักรวม × ราคา/กก.
-    const paperCost = totalWeightKg * paperInfo.pricePerKg;
-    // ราคาขายกระดาษ +20%
-    const paperSellingPrice = paperCost * 1.20;
+    // Print Cost (Req 3.6) — คิดต่อด้านผ่านตาราง Heidelberg แล้วรวม (ส่ง 'single' กันนับ multiplier ซ้ำ)
+    const pc = (c) => this.calculatePrintCost(press.plateSize, inkType, printSheetsNeeded, c, 'single');
+    let printCostResult;
+    let printCost;
+    if (perSide.sides === 1) {
+      printCostResult = pc(frontColors);
+      printCost = printCostResult.cost;
+    } else if (isWorkAndTurn) {
+      // หน้าในตัว: พิมพ์รอบเดียว สีรวมหน้า+หลังบนเพลทเดียว
+      printCostResult = pc(frontColors + backColors);
+      printCost = printCostResult.cost;
+    } else {
+      // sheetwise: พิมพ์ 2 รอบ (หน้า + หลัง)
+      const front = pc(frontColors);
+      const back = backColors > 0 ? pc(backColors) : { cost: 0, isApproximated: false, plateClassUsed: front.plateClassUsed };
+      printCostResult = { cost: front.cost + back.cost, isApproximated: front.isApproximated || back.isApproximated, plateClassUsed: front.plateClassUsed };
+      printCost = printCostResult.cost;
+    }
 
-    // ราคารวมทั้งหมด = ค่าเพลท + ราคาขายกระดาษ + ค่าพิมพ์ (Req 7.12)
+    // ── ต้นทุนวัสดุ (Req 4) ──
+    // Paper_Material: คิดตามน้ำหนัก Factory_Sheet × parentSheetCount (Req 1.5)
+    // Sticker_Material: คิดตามพื้นที่ชิ้นสำเร็จ × จำนวน (Req 4.4)
+    let materialBasis;
+    let weightPerSheetGrams = 0;
+    let totalWeightKg = 0;
+    let materialCost = 0;
+    let materialUnitPrice = 0;   // สำหรับ label
+    if (isSticker) {
+      materialBasis = 'area';
+      const pieceAreaSqCm = size.width * size.height;
+      materialUnitPrice = this.STICKER_PRICE_PER_SQCM[paperType];
+      materialCost = materialUnitPrice * pieceAreaSqCm * quantity;
+    } else {
+      materialBasis = 'weight';
+      // น้ำหนักต่อใบโรงงาน (กรัม) = (กว้าง × ยาว × แกรม) ÷ 10,000
+      weightPerSheetGrams = (factoryWidth * factoryHeight * Number(gsm)) / 10000;
+      // น้ำหนักรวม (กก.) = น้ำหนักต่อใบ × จำนวนใบโรงงาน ÷ 1000
+      totalWeightKg = (weightPerSheetGrams * parentSheetCount) / 1000;
+      materialUnitPrice = paperInfo.pricePerKg;
+      materialCost = totalWeightKg * materialUnitPrice;
+    }
+    // ราคาขายวัสดุ +20% (Req 5.3)
+    const paperCost = materialCost;
+    const paperSellingPrice = materialCost * 1.20;
+
+    // ราคารวมทั้งหมด = ค่าเพลท + ราคาขายวัสดุ + ค่าพิมพ์ (Req 7.12)
     const totalAmount = plateCost + paperSellingPrice + printCost;
 
     // Print method notes
     let methodNote = '';
     if (method === 'work-and-turn' || method === 'work-and-tumble') {
-      methodNote = 'พิมพ์ 2 ด้านในรอบเดียว ใช้เพลท 1 ชุด (' + (method === 'work-and-turn' ? 'Work-and-Turn' : 'Work-and-Tumble') + ')';
-    } else if (method === 'sheetwise') {
-      methodNote = 'พิมพ์ 2 รอบ ใช้เพลท 2 ชุด (Sheetwise)';
+      methodNote = 'พิมพ์ 2 ด้านในรอบเดียว ใช้เพลท 1 ชุด (' + (method === 'work-and-turn' ? 'Work-and-Turn' : 'Work-and-Tumble') + '), ชิ้นสำเร็จ = ชิ้น/ใบ ÷ 2';
+    } else if (method === 'sheetwise' && perSide.sides === 2) {
+      methodNote = 'พิมพ์ 2 รอบ ใช้เพลทหน้า+หลัง (Sheetwise)';
     }
+
+    // ชื่อวัสดุ + ป้ายราคาวัสดุ
+    const materialName = isSticker
+      ? (this.STICKER_LABEL[paperType] || paperType)
+      : paperInfo.name;
+    const materialPriceText = isSticker
+      ? (materialUnitPrice.toFixed(3) + ' บาท/ตร.ซม.')
+      : (paperInfo.pricePerKg.toFixed(2) + ' บาท/กก.');
+
+    // สีต่อด้าน text
+    const colorsText = (perSide.sides === 2)
+      ? ('หน้า ' + frontColors + ' สี / หลัง ' + backColors + ' สี')
+      : (frontColors + ' สี (1 หน้า)');
 
     // Build cost breakdown (ordered as specified)
     const costBreakdown = [
-      { label: 'ขนาดกระดาษ', amount: 0, conditional: false, text: sheet.name + ' (' + sheet.width.toFixed(1) + '×' + sheet.height.toFixed(1) + ' ซม.)' },
+      { label: 'กระดาษโรงงาน', amount: 0, conditional: false, text: sheet.name + ' (' + factoryWidth.toFixed(1) + '×' + factoryHeight.toFixed(1) + ' ซม.)' },
+      { label: 'ใบหลังตัด (เข้าเครื่อง)', amount: 0, conditional: false, text: cutWidth.toFixed(1) + '×' + cutHeight.toFixed(1) + ' ซม. — ตัดได้ ' + cutsPerParentSheet + ' ใบ/แผ่นโรงงาน' },
       { label: 'เครื่องพิมพ์', amount: 0, conditional: false, text: press.name + ' (รับสูงสุด ' + press.maxWidth + '×' + press.maxHeight + ' ซม.)' },
-      { label: 'ชนิดกระดาษ', amount: 0, conditional: false, text: paperInfo.name + ' — ' + paperInfo.pricePerKg.toFixed(2) + ' บาท/กก.' },
+      { label: 'วัสดุ', amount: 0, conditional: false, text: materialName + ' — ' + materialPriceText },
       { label: 'พื้นที่พิมพ์ได้', amount: 0, conditional: false, text: printableWidth.toFixed(1) + '×' + printableHeight.toFixed(1) + ' ซม.' },
       { label: 'ขนาดชิ้นงาน (รวม bleed)', amount: 0, conditional: false, text: pieceWidth.toFixed(1) + '×' + pieceHeight.toFixed(1) + ' ซม.' },
-      { label: 'ชิ้น/ใบพิมพ์', amount: piecesPerSheet, conditional: false, unit: 'ชิ้น' },
+      { label: 'ชิ้น/ใบพิมพ์ (n-up)', amount: nUp, conditional: false, unit: 'ชิ้น' },
+      { label: 'ชิ้นสำเร็จ/ใบพิมพ์', amount: finishedPiecesPerSheet, conditional: false, unit: 'ชิ้น' },
       { label: 'จำนวนพิมพ์', amount: quantity, conditional: false, unit: 'ชิ้น' },
       { label: 'ใบพิมพ์ขั้นต่ำ', amount: minSheets, conditional: false, unit: 'ใบพิมพ์' },
       {
@@ -1336,22 +1521,29 @@ const PricingEngine = {
                (perfectingApplied ? ' + Perfecting ' + (perfectingExtra * 100).toFixed(1) + '%' : ''),
         amount: spoilageSheets, conditional: false, unit: 'ใบพิมพ์'
       },
-      { label: 'ใบพิมพ์รวม', amount: totalSheets, conditional: false, unit: 'ใบพิมพ์' },
-      { label: 'น้ำหนักต่อใบพิมพ์', amount: weightPerSheetGrams, conditional: false, unit: 'กรัม' },
-      { label: 'น้ำหนักรวม', amount: totalWeightKg, conditional: false, unit: 'กก.' },
-      { label: 'จำนวนสี', amount: colors, conditional: false, unit: 'สี' },
-      {
-        label: 'ค่าเพลท (' + activePlateTable.name + ': ' + platePerColor + ' × ' + colors + ' สี × ' + plateSets + ' ชุด)',
-        amount: plateCost, conditional: false
-      },
-      { label: 'ต้นทุนกระดาษ', amount: paperCost, conditional: false },
-      { label: 'ราคาขายกระดาษ (+20%)', amount: paperSellingPrice, conditional: false },
-      { label: 'ประเภทหมึก', amount: 0, conditional: false,
-        text: inkType === 'uv' ? 'UV' : 'คอนเวนชั่นนัล' },
-      { label: 'ค่าพิมพ์ (' + printCostResult.plateClassUsed + ' ' + (inkType === 'uv' ? 'UV' : 'คอนเวนชั่นนัล') + ')',
-        amount: printCost, conditional: false },
-      { label: 'ราคารวมทั้งหมด', amount: totalAmount, conditional: false },
+      { label: 'ใบพิมพ์รวม', amount: printSheetsNeeded, conditional: false, unit: 'ใบพิมพ์' },
+      { label: 'กระดาษโรงงานที่ใช้', amount: parentSheetCount, conditional: false, unit: 'แผ่น' },
     ];
+
+    // วัสดุ: กระดาษแสดงน้ำหนัก, สติกเกอร์แสดงพื้นที่
+    if (!isSticker) {
+      costBreakdown.push({ label: 'น้ำหนักต่อแผ่นโรงงาน', amount: weightPerSheetGrams, conditional: false, unit: 'กรัม' });
+      costBreakdown.push({ label: 'น้ำหนักรวม', amount: totalWeightKg, conditional: false, unit: 'กก.' });
+    }
+
+    costBreakdown.push({ label: 'จำนวนสี', amount: 0, conditional: false, text: colorsText });
+    costBreakdown.push({
+      label: 'ค่าเพลท (' + activePlateTable.name + ': ' + platePerColor + ' × ' + totalPlates + ' เพลท)',
+      amount: plateCost, conditional: false
+    });
+    costBreakdown.push({ label: (isSticker ? 'ต้นทุนสติกเกอร์' : 'ต้นทุนกระดาษ'), amount: paperCost, conditional: false });
+    costBreakdown.push({ label: 'ราคาขายวัสดุ (+20%)', amount: paperSellingPrice, conditional: false });
+    costBreakdown.push({ label: 'ประเภทหมึก', amount: 0, conditional: false, text: inkType === 'uv' ? 'UV' : 'คอนเวนชั่นนัล' });
+    costBreakdown.push({
+      label: 'ค่าพิมพ์ (' + printCostResult.plateClassUsed + ' ' + (inkType === 'uv' ? 'UV' : 'คอนเวนชั่นนัล') + ')',
+      amount: printCost, conditional: false
+    });
+    costBreakdown.push({ label: 'ราคารวมทั้งหมด', amount: totalAmount, conditional: false });
 
     // Insert note for spoilage minimum after Spoilage row (Req 12.9)
     if (spoilageHitMin) {
@@ -1387,21 +1579,33 @@ const PricingEngine = {
       productType: productType,
       costBreakdown: costBreakdown,
       totalPrice: totalAmount,
-      unitPrice: piecesPerSheet,
+      unitPrice: finishedPiecesPerSheet,
       quantity: quantity,
       // Extra summary fields for UI
       summary: {
-        totalSheets: totalSheets,
+        totalSheets: printSheetsNeeded,
         minSheets: minSheets,
         spoilageSheets: spoilageSheets,
-        piecesPerSheet: piecesPerSheet,
+        piecesPerSheet: finishedPiecesPerSheet,
+        nUp: nUp,
+        finishedPiecesPerSheet: finishedPiecesPerSheet,
+        // Cut sheet info (Req 1.8)
+        cutWidth: cutWidth,
+        cutHeight: cutHeight,
+        cutsPerParentSheet: cutsPerParentSheet,
+        parentSheetCount: parentSheetCount,
+        // Per-side colors (Req 3.9)
+        sides: perSide.sides,
+        frontColors: frontColors,
+        backColors: backColors,
+        totalPlates: totalPlates,
+        materialBasis: materialBasis,
         plateCost: plateCost,
         paperCost: paperCost,
         paperSellingPrice: paperSellingPrice,
         printCost: printCost,
         inkType: inkType,
         plateClassUsed: printCostResult.plateClassUsed,
-        // NEW (Req 12, 13, 14)
         spoilageProfile: resolvedJobType,
         spoilageRate: profile.rate,
         effectiveSpoilageRate: effectiveRate,
