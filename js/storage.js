@@ -341,7 +341,7 @@ const StorageManager = {
             pvc: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSqCm: 0.004 },
             pp: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSqCm: 0.004 },
             pet: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSqCm: 0.005 },
-            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึก UV)", pricePerSqCm: 0.004 },
+            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSqCm: 0.004 },
             plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.2, pricePerKg: 80 },
             plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.3, pricePerKg: 80 },
             plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.4, pricePerKg: 80 },
@@ -429,7 +429,7 @@ const StorageManager = {
             ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", pricePerSheet: 2.80 },
             greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", pricePerSheet: 1.90 },
             greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", pricePerSheet: 2.60 },
-            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึก UV)", pricePerSheet: 2.50 },
+            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSheet: 2.50 },
             stickerPVC: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSheet: 3.50 },
             stickerPP: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSheet: 3.20 },
             stickerPET: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSheet: 4.00 }
@@ -469,7 +469,7 @@ const StorageManager = {
             ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", pricePerSheet: 2.60 },
             greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", pricePerSheet: 1.70 },
             greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", pricePerSheet: 2.40 },
-            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึก UV)", pricePerSheet: 2.30 },
+            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSheet: 2.30 },
             stickerPVC: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSheet: 3.30 },
             stickerPP: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSheet: 3.00 },
             stickerPET: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSheet: 3.80 }

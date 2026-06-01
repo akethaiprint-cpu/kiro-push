@@ -148,7 +148,7 @@ const PricingEngine = {
     pvcSticker:   'uv',
     ppSticker:    'uv',
     petSticker:   'uv',
-    paperSticker: 'uv',
+    paperSticker: 'conventional',
   },
 
   /**

@@ -1060,7 +1060,7 @@ const Calculator = {
     { key: 'pvcSticker',   name: 'สติกเกอร์ PVC (หมึก UV)' },
     { key: 'ppSticker',    name: 'สติกเกอร์ PP (หมึก UV)' },
     { key: 'petSticker',   name: 'สติกเกอร์ PET (หมึก UV)' },
-    { key: 'paperSticker', name: 'สติกเกอร์กระดาษ (หมึก UV)' },
+    { key: 'paperSticker', name: 'สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)' },
   ],
 
   /**
@@ -1312,7 +1312,14 @@ const Calculator = {
       gsmEl.required = !isSticker;
       if (isSticker) gsmEl.value = '';
     }
-    if (inkEl) inkEl.value = isSticker ? 'uv' : 'conventional';
+    if (inkEl) {
+      // ใช้ค่า default ตามวัสดุ (สติกเกอร์กระดาษ = คอนเวนชั่นนัล, พลาสติก = UV)
+      let defaultInk = 'conventional';
+      if (isSticker && typeof PricingEngine !== 'undefined' && PricingEngine.MATERIAL_INK_DEFAULT) {
+        defaultInk = PricingEngine.MATERIAL_INK_DEFAULT[materialKey] || 'uv';
+      }
+      inkEl.value = defaultInk;
+    }
   },
 
   /**
