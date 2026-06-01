@@ -44,7 +44,7 @@ const Calculator = {
       { key: 'woodfree', name: 'กระดาษปอนด์ (Woodfree)' },
       { key: 'artPaper', name: 'อาร์ตมัน/ด้าน (Art Paper)' },
       { key: 'artBoard', name: 'อาร์ตการ์ด (Art Board)' },
-      { key: 'ivoryBoard', name: 'อาร์ตการ์ด 1 หน้า (Ivory)' },
+      { key: 'ivoryBoard', name: 'อาร์ตการ์ด 1 หน้า (ไอวอรี่)' },
       { key: 'greyBack', name: 'กล่องแป้งหลังเทา' },
       { key: 'kraft', name: 'คราฟท์' },
       { key: 'cardWhite', name: 'กระดาษการ์ดขาว' },
@@ -58,6 +58,26 @@ const Calculator = {
    * Session storage key for retaining selections
    */
   SESSION_KEY: 'tp_calculator_session',
+
+  /**
+   * ขนาดงานสำเร็จมาตรฐาน (ซม.) — ใช้ใน dropdown ขนาดมาตรฐาน + auto-fill ช่องกว้าง/ยาว
+   * label แสดงในวงเล็บพร้อมขนาด
+   */
+  STANDARD_SIZES: {
+    'A6':         { label: 'A6',                 width: 10.5, height: 14.8 },
+    'A5':         { label: 'A5',                 width: 14.8, height: 21.0 },
+    'A4':         { label: 'A4',                 width: 21.0, height: 29.7 },
+    'A3':         { label: 'A3',                 width: 29.7, height: 42.0 },
+    'A2':         { label: 'A2',                 width: 42.0, height: 59.4 },
+    'B5':         { label: 'B5',                 width: 17.6, height: 25.0 },
+    'B4':         { label: 'B4',                 width: 25.0, height: 35.3 },
+    'nameCard':   { label: 'นามบัตร',            width: 9.0,  height: 5.5 },
+    'postcard':   { label: 'โปสการ์ด',           width: 10.0, height: 15.0 },
+    'dl':         { label: 'แผ่นพับ DL (1/3 A4)', width: 9.9,  height: 21.0 },
+    'cd':         { label: 'ปกซีดี',             width: 12.0, height: 12.0 },
+    'poster_a2':  { label: 'โปสเตอร์ A2',        width: 42.0, height: 59.4 },
+    'poster_a1':  { label: 'โปสเตอร์ A1',        width: 59.4, height: 84.1 },
+  },
 
   /**
    * Initialize calculator — load price tables, set up event listeners, restore session
@@ -146,6 +166,11 @@ const Calculator = {
         // screen / industrialOffset: วิธีพิมพ์ (printSides) → เปิด/ปิดช่องสีด้านหลัง
         if (id === 'inputPrintSides') {
           this._toggleBackColorsByPrintSides(e.target.value);
+        }
+
+        // ขนาดมาตรฐาน → เติมช่องกว้าง/ยาวอัตโนมัติ (แสดงขนาดให้ผู้ใช้เห็น)
+        if (id === 'inputStandardSize') {
+          this._applyStandardSize(e.target.value);
         }
 
         if (this.currentSystem !== 'pressSheet') return;
@@ -488,11 +513,10 @@ const Calculator = {
     } else {
       // Auto-fill width/height from standard size before validation
       if (inputData.standardSize && (!inputData.width || !inputData.height)) {
-        const stdSizes = { 'A5': { w: '14.8', h: '21' }, 'A4': { w: '21', h: '29.7' }, 'A3': { w: '29.7', h: '42' } };
-        const std = stdSizes[inputData.standardSize];
+        const std = this.STANDARD_SIZES[inputData.standardSize];
         if (std) {
-          inputData.width = std.w;
-          inputData.height = std.h;
+          inputData.width = String(std.width);
+          inputData.height = String(std.height);
         }
       }
 
@@ -764,13 +788,13 @@ const Calculator = {
    * Render standard size selector for brochure/leaflet
    */
   _renderStandardSizeSelector(productPriceData) {
-    const standardSizes = productPriceData && productPriceData.standardSizes
-      ? productPriceData.standardSizes
-      : ['A5', 'A4', 'A3'];
+    // ใช้ตารางกลาง STANDARD_SIZES (มี w×h) เพื่อแสดงขนาดในวงเล็บ + auto-fill
+    const order = Object.keys(this.STANDARD_SIZES);
 
-    const options = standardSizes.map((s) =>
-      `<option value="${s}">${s}</option>`
-    ).join('');
+    const options = order.map((key) => {
+      const s = this.STANDARD_SIZES[key];
+      return `<option value="${key}">${s.label} (${s.width} × ${s.height} ซม.)</option>`;
+    }).join('');
 
     return `
       <div class="form-group">
@@ -782,6 +806,26 @@ const Calculator = {
           </select>
         </div>
       </div>`;
+  },
+
+  /**
+   * เติมช่องกว้าง/ยาวอัตโนมัติเมื่อเลือกขนาดมาตรฐาน (ให้ผู้ใช้เห็นขนาดบนฟอร์ม)
+   * ถ้าเลือก "กำหนดเอง" (ค่าว่าง) จะล้างช่องให้กรอกเอง
+   * @param {string} sizeKey - คีย์ใน STANDARD_SIZES
+   */
+  _applyStandardSize(sizeKey) {
+    const widthEl = document.getElementById('inputWidth');
+    const heightEl = document.getElementById('inputHeight');
+    if (!widthEl || !heightEl) return;
+    const s = this.STANDARD_SIZES[sizeKey];
+    if (s) {
+      widthEl.value = s.width;
+      heightEl.value = s.height;
+    } else {
+      // กำหนดเอง — ล้างช่องให้ผู้ใช้กรอก
+      widthEl.value = '';
+      heightEl.value = '';
+    }
   },
 
   /**
@@ -1009,7 +1053,7 @@ const Calculator = {
     { key: 'woodfree',   name: 'ปอนด์ (Woodfree)' },
     { key: 'artPaper',   name: 'อาร์ตมัน/ด้าน (Art Paper)' },
     { key: 'artBoard',   name: 'อาร์ตการ์ด 2 หน้า (Art Board)' },
-    { key: 'ivoryBoard', name: 'อาร์ตการ์ด 1 หน้า (Ivory)' },
+    { key: 'ivoryBoard', name: 'อาร์ตการ์ด 1 หน้า (ไอวอรี่)' },
     { key: 'greyBack',   name: 'กล่องแป้งหลังเทา' },
     { key: 'kraft',      name: 'คราฟท์' },
     { key: 'cardWhite',  name: 'กระดาษการ์ดขาว' },
@@ -1609,14 +1653,9 @@ const Calculator = {
     if (inputData.height) specs.size.height = Number(inputData.height);
     if (inputData.depth) specs.size.depth = Number(inputData.depth);
 
-    // Standard size auto-fill (A5, A4, A3) — ถ้าเลือกขนาดมาตรฐานแล้วไม่ได้กรอก width/height
+    // Standard size auto-fill — ถ้าเลือกขนาดมาตรฐานแล้วไม่ได้กรอก width/height
     if (inputData.standardSize && (!specs.size.width || !specs.size.height)) {
-      const standardSizes = {
-        'A5': { width: 14.8, height: 21.0 },
-        'A4': { width: 21.0, height: 29.7 },
-        'A3': { width: 29.7, height: 42.0 },
-      };
-      const std = standardSizes[inputData.standardSize];
+      const std = this.STANDARD_SIZES[inputData.standardSize];
       if (std) {
         specs.size.width = std.width;
         specs.size.height = std.height;
