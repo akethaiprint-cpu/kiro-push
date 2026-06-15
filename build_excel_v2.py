@@ -859,8 +859,154 @@ widths_pl = [30, 16, 16, 16, 16, 16]
 for col, w in enumerate(widths_pl, 1):
     ws_pl.column_dimensions[get_column_letter(col)].width = w
 
+# ============================================================
+# SHEET 10: StickerCalc (สติกเกอร์/ฉลาก Offset อุตสาหกรรม — โมเดลล่าสุด)
+#   ค่าพิมพ์ตามจำนวนใบพิมพ์ + เรต UV/คอนเวนชั่นนัลจริง
+#   ค่าวัสดุตามพื้นที่ × (จำนวนชิ้น + วัสดุเผื่อเสีย)
+# ============================================================
+ws_st = wb.create_sheet("StickerCalc")
+
+ws_st["A1"] = "คิดราคาสติกเกอร์/ฉลาก — Offset อุตสาหกรรม (โมเดลล่าสุด: ค่าพิมพ์/ใบ + เรต UV + วัสดุเผื่อเสีย)"
+ws_st.merge_cells("A1:E1")
+style_header(ws_st["A1"])
+ws_st.row_dimensions[1].height = 32
+
+ws_st["A2"] = "🟡 ช่องเหลือง = กรอก  |  🟢 เขียว = ผลคำนวณ  |  ตรงกับเว็บ calculator (ระบบ Offset อุตสาหกรรม → สติกเกอร์/ฉลาก)"
+ws_st.merge_cells("A2:E2")
+ws_st["A2"].font = SMALL
+ws_st["A2"].alignment = CENTER
+ws_st["A2"].fill = INFO_FILL
+
+# ── Input ──
+ws_st["A4"] = "ข้อมูลงาน (กรอกช่องสีเหลือง)"
+ws_st.merge_cells("A4:E4")
+style_section(ws_st["A4"])
+
+st_inputs = [
+    (5, "ชื่องาน", "สติกเกอร์ PVC 10×10"),
+    (6, "กว้าง (ซม.)", 10),
+    (7, "ยาว (ซม.)", 10),
+    (8, "จำนวนสี (รวมหน้า+หลัง)", 4),
+    (9, "จำนวน (ชิ้น)", 10000),
+    (10, "ประเภทหมึก", "UV"),            # dropdown
+    (11, "ขนาดเพลท", "ตัด 4"),           # dropdown
+    (12, "ราคาวัสดุ (บาท/ตร.ซม.)", 0.004),
+]
+for row, label, default in st_inputs:
+    lbl = ws_st.cell(row=row, column=1, value=label)
+    style_normal(lbl, bold=True)
+    inp = ws_st.cell(row=row, column=2, value=default)
+    style_input(inp)
+    ws_st.merge_cells(f"B{row}:E{row}")
+ws_st["B12"].number_format = "#,##0.0000"
+
+dv_st_ink = DataValidation(type="list", formula1='"Conventional,UV"', allow_blank=False)
+dv_st_ink.add("B10"); ws_st.add_data_validation(dv_st_ink)
+dv_st_plate = DataValidation(type="list", formula1='"ตัด 4,ตัด 2"', allow_blank=False)
+dv_st_plate.add("B11"); ws_st.add_data_validation(dv_st_plate)
+
+ws_st["A13"] = ("💡 ชนิดหมึกตามวัสดุ: สติกเกอร์ PVC/PP/PET/ฟอยล์ + แผ่นพลาสติก = UV | "
+                "กระดาษอาร์ท/สติกเกอร์กระดาษ = Conventional | ตัด 4 = MO 65×48 | ตัด 2 = SM74 74×53")
+ws_st.merge_cells("A13:E13")
+style_normal(ws_st["A13"], align="center")
+ws_st["A13"].fill = INFO_FILL
+ws_st["A13"].font = SMALL
+
+# ── Imposition + จำนวนใบพิมพ์ ──
+ws_st["A15"] = "เลย์ชิ้นงาน + จำนวนใบพิมพ์ (อัตโนมัติ)"
+ws_st.merge_cells("A15:E15")
+style_section(ws_st["A15"])
+
+st_calc = [
+    (16, "ใบพิมพ์ กว้าง (ซม.)", '=IF(B11="ตัด 2",74,65)', "0.00"),
+    (17, "ใบพิมพ์ ยาว (ซม.)", '=IF(B11="ตัด 2",53,48)', "0.00"),
+    (18, "พื้นที่พิมพ์ กว้าง (− Gripper 1.2)", '=B16-1.2', "0.00"),
+    (19, "พื้นที่พิมพ์ ยาว (− Side Lay 0.7)", '=B17-0.7', "0.00"),
+    (20, "footprint กว้าง (+ Bleed 0.6)", '=B6+0.6', "0.00"),
+    (21, "footprint ยาว (+ Bleed 0.6)", '=B7+0.6', "0.00"),
+    (22, "ชิ้น/ใบ — แนวปกติ", '=INT(B18/B20)*INT(B19/B21)', "#,##0"),
+    (23, "ชิ้น/ใบ — หมุน 90°", '=INT(B18/B21)*INT(B19/B20)', "#,##0"),
+    (24, "ชิ้น/ใบพิมพ์ (nUp = เลือกค่ามาก)", '=MAX(B22,B23)', "#,##0"),
+    (25, "ใบพิมพ์ขั้นต่ำ", '=CEILING(B9/B24,1)', "#,##0"),
+    (26, "อัตราเผื่อเสีย (%) — UV10/4สี8/1สี3/อื่น5",
+     '=IF(B10="UV",10,IF(B8>=4,8,IF(B8<=1,3,5)))', "0"),
+    (27, "ใบพิมพ์เผื่อเสีย", '=CEILING(B25*B26/100,1)', "#,##0"),
+    (28, "ใบพิมพ์รวม (คิดค่าพิมพ์)", '=B25+B27', "#,##0"),
+    (29, "ชิ้นเผื่อเสีย (= ใบเผื่อเสีย × nUp)", '=B27*B24', "#,##0"),
+]
+for row, label, formula, fmt in st_calc:
+    lbl = ws_st.cell(row=row, column=1, value=label)
+    style_normal(lbl)
+    f = ws_st.cell(row=row, column=2, value=formula)
+    style_normal(f, align="right")
+    f.number_format = fmt
+    ws_st.merge_cells(f"B{row}:E{row}")
+
+# ── ราคา ──
+ws_st["A31"] = "ราคา (อัตโนมัติ)"
+ws_st.merge_cells("A31:E31")
+style_section(ws_st["A31"])
+
+st_price = [
+    (32, "ค่าเพลท/สี (ตัด 4=300, ตัด 2=600)", '=IF(B11="ตัด 2",600,300)', "#,##0"),
+    (33, "ค่าเพลทรวม (× จำนวนสี)", '=B32*B8', "#,##0.00"),
+    (34, "เหมา/สี (flat rate)",
+     '=IF(B11="ตัด 4",IF(B10="UV",1500,900),IF(B10="UV",2000,1200))', "#,##0"),
+    (35, "ช่วงเหมา ขอบบน (ใบ)",
+     '=IF(AND(B11="ตัด 4",B10="UV"),1000,10000)', "#,##0"),
+    (36, "ส่วนเกิน (บาท/ใบ/สี)",
+     '=IF(B11="ตัด 4",IF(B10="UV",1,0.1),IF(B10="UV",1.5,0.2))', "0.00"),
+    (37, "ใบส่วนเกิน", '=MAX(B28-B35,0)', "#,##0"),
+    (38, "ค่าพิมพ์รวม = (เหมา + เกิน×อัตรา) × สี",
+     '=(B34+B37*B36)*B8', "#,##0.00"),
+    (39, "พื้นที่ชิ้น (ตร.ซม.)", '=B6*B7', "#,##0.00"),
+    (40, "ค่าวัสดุ = ราคา/ตร.ซม. × พื้นที่ × (จำนวน + เผื่อเสีย)",
+     '=B12*B39*(B9+B29)', "#,##0.00"),
+]
+for row, label, formula, fmt in st_price:
+    lbl = ws_st.cell(row=row, column=1, value=label)
+    style_normal(lbl)
+    f = ws_st.cell(row=row, column=2, value=formula)
+    style_normal(f, align="right")
+    f.number_format = fmt
+    ws_st.merge_cells(f"B{row}:E{row}")
+
+# ── สรุป ──
+ws_st["A42"] = "สรุปราคา"
+ws_st.merge_cells("A42:E42")
+style_section(ws_st["A42"])
+
+ws_st["A43"] = "ราคารวม (ค่าเพลท + ค่าพิมพ์ + ค่าวัสดุ)"
+ws_st["A43"].font = BOLD; ws_st["A43"].alignment = LEFT; ws_st["A43"].border = BOX
+st_total = ws_st["B43"]
+st_total.value = '=B33+B38+B40'
+st_total.number_format = '"฿"#,##0.00'
+style_result(st_total)
+st_total.font = LARGE_GREEN
+ws_st.merge_cells("B43:E43")
+ws_st.row_dimensions[43].height = 32
+
+ws_st["A44"] = "ราคาต่อชิ้น"
+ws_st["A44"].font = BOLD; ws_st["A44"].alignment = LEFT; ws_st["A44"].border = BOX
+st_unit = ws_st["B44"]
+st_unit.value = '=B43/B9'
+st_unit.number_format = '"฿"#,##0.0000'
+style_result(st_unit)
+ws_st.merge_cells("B44:E44")
+
+ws_st["A46"] = ("ตัวอย่างตรวจสอบ: PVC UV 10×10 ซม. 4 สี 10,000 ชิ้น → nUp 24, ใบขั้นต่ำ 417, เผื่อเสีย 42 → 459 ใบ | "
+                "ค่าเพลท 1,200 + ค่าพิมพ์ 6,000 (UV ตัด 4 เหมา) + ค่าวัสดุ 4,403.20 = ฿11,603.20")
+ws_st.merge_cells("A46:E46")
+style_normal(ws_st["A46"], align="center")
+ws_st["A46"].fill = INFO_FILL
+ws_st["A46"].font = SMALL
+
+widths_st = [44, 16, 14, 14, 14]
+for col, w in enumerate(widths_st, 1):
+    ws_st.column_dimensions[get_column_letter(col)].width = w
+
 # Reorder sheets
-desired = ["Calculator", "Quotation", "Machines", "PrintCost", "Spoilage",
+desired = ["Calculator", "StickerCalc", "Quotation", "Machines", "PrintCost", "Spoilage",
            "PaperPrice", "PlasticPrice", "PaperCutting", "QuickSelect"]
 for i, name in enumerate(desired):
     if name in wb.sheetnames:
@@ -869,5 +1015,5 @@ for i, name in enumerate(desired):
             wb.move_sheet(name, offset=i - idx)
 
 wb.save("/Users/thaiprint/kiro/ThaiPrint-Pricing-Calculator-v2.xlsx")
-print("✅ All 9 sheets created!")
+print("✅ All 10 sheets created!")
 print(f"Order: {wb.sheetnames}")
