@@ -1848,6 +1848,11 @@ const Calculator = {
 // Initialize calculator when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   Calculator.init();
+  // แสดงเวอร์ชันที่โหลดจริง (ช่วยตรวจว่าเบราว์เซอร์โหลด JS ใหม่หรือยัง)
+  try {
+    var v = document.getElementById('appVersion');
+    if (v) v.textContent = 'เวอร์ชัน v28';
+  } catch (e) { /* ignore */ }
 });
 
 // Export for testing (Node.js/Vitest)
