@@ -1752,8 +1752,11 @@ const Calculator = {
     if (inputData.paperType) specs.paperType = inputData.paperType;
     if (inputData.pressType) specs.pressType = inputData.pressType;
 
-    // pressSheet: inkType (Req 8) — default conventional
-    specs.inkType = inputData.inkType === 'uv' ? 'uv' : 'conventional';
+    // inkType: ตั้งเฉพาะเมื่อฟอร์มมีช่องเลือกหมึกจริง (pressSheet)
+    // ระบบอื่น (industrialOffset/screen) ไม่มีช่องนี้ → ปล่อยให้ engine อนุมานจากวัสดุ (เช่น PVC → UV)
+    if (inputData.inkType === 'uv' || inputData.inkType === 'conventional') {
+      specs.inkType = inputData.inkType;
+    }
 
     // pressSheet: จำนวนหน้า + สีต่อด้าน (Req 3.1, 3.2, 3.8)
     // คง specs.colorCount เดิมไว้เป็น fallback ของ engine เมื่อไม่มี frontColors (legacy)
@@ -1850,7 +1853,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Calculator.init();
   // แสดงเวอร์ชันที่โหลดจริง (ช่วยตรวจว่าเบราว์เซอร์โหลด JS ใหม่หรือยัง)
   try {
-    var APP_VERSION = 'v29';
+    var APP_VERSION = 'v30';
     var v1 = document.getElementById('appVersion');
     if (v1) v1.textContent = 'เวอร์ชัน ' + APP_VERSION;
     var v2 = document.getElementById('appVersionTop');
