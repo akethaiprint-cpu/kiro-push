@@ -1850,8 +1850,12 @@ document.addEventListener('DOMContentLoaded', () => {
   Calculator.init();
   // แสดงเวอร์ชันที่โหลดจริง (ช่วยตรวจว่าเบราว์เซอร์โหลด JS ใหม่หรือยัง)
   try {
-    var v = document.getElementById('appVersion');
-    if (v) v.textContent = 'เวอร์ชัน v28';
+    var APP_VERSION = 'v29';
+    var v1 = document.getElementById('appVersion');
+    if (v1) v1.textContent = 'เวอร์ชัน ' + APP_VERSION;
+    var v2 = document.getElementById('appVersionTop');
+    if (v2) v2.textContent = '✓ โหลดเวอร์ชัน ' + APP_VERSION + ' แล้ว';
+    console.log('ThaiPrint calculator ' + APP_VERSION + ' loaded');
   } catch (e) { /* ignore */ }
 });
 
