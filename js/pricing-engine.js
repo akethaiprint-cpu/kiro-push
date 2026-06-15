@@ -835,17 +835,18 @@ const PricingEngine = {
       }
 
       // ชนิดหมึก: ใช้ค่าที่ผู้ใช้เลือก ไม่งั้นอนุมานจากวัสดุ
-      // (วัสดุที่ชื่อมี "UV" หรือเป็นแผ่นพลาสติก density → UV, นอกนั้นคอนเวนชั่นนัล)
+      // อนุมานจาก key วัสดุเป็นหลัก (คงที่เสมอ): pvc/pp/pet/foil/plastic → UV
+      // เสริมด้วยชื่อวัสดุที่มี "UV" หรือ field density (แผ่นพลาสติก) เพื่อความชัวร์
       let inkTypeOffset;
       if (specs.inkType === 'uv' || specs.inkType === 'conventional') {
         inkTypeOffset = specs.inkType;
       } else {
         const md = productTable.materials && productTable.materials[material];
-        const isUvMaterial = !!md && (
-          (typeof md.name === 'string' && md.name.indexOf('UV') !== -1) ||
-          (md.density && md.thicknessMm)
-        );
-        inkTypeOffset = isUvMaterial ? 'uv' : 'conventional';
+        const key = (typeof material === 'string') ? material.toLowerCase() : '';
+        const isUvByKey = /pvc|pp|pet|foil|plastic/.test(key);
+        const isUvByName = !!md && typeof md.name === 'string' && md.name.indexOf('UV') !== -1;
+        const isUvByPlastic = !!md && md.density && md.thicknessMm;
+        inkTypeOffset = (isUvByKey || isUvByName || isUvByPlastic) ? 'uv' : 'conventional';
       }
 
       // ขนาดเพลท: default ตัด 4 (MO 65×48 ซม.), เลือก ตัด 2 (SM74 74×53 ซม.) ได้
