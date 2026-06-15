@@ -809,6 +809,7 @@ const PricingEngine = {
     // ค่าจ้างพิมพ์ Offset = ราคาเหมาต่อสี × จำนวนสี
     // ถ้าจำนวนเกิน flatRateMaxQty: (เหมา + ส่วนเกิน × overageRate) × จำนวนสี
     let printCost = 0;
+    let printLabel = 'ค่าพิมพ์';
     const printData = productTable.printCost;
 
     if (!printData) {
@@ -820,7 +821,62 @@ const PricingEngine = {
     // Sheetwise: ค่าพิมพ์ × 2 รอบ, Work-and-Turn/Tumble: × 1 รอบ
     const printMultiplierOffset = (printMethodOffset === 'sheetwise') ? 2 : 1;
 
-    if (printData.flatRate !== undefined) {
+    if (productType === 'sticker' || productType === 'label') {
+      // ── สติกเกอร์/ฉลาก: คิดค่าพิมพ์ตาม "จำนวนใบพิมพ์" (imposition n-up) ──
+      // ใช้เรตจริงตามชนิดหมึก (UV/คอนเวนชั่นนัล) และขนาดเพลท (ตัด 4 = MO / ตัด 2 = SM74)
+      // แทนการคิดเหมาต่อชิ้น เพื่อให้สติกเกอร์ PVC (หมึก UV) ใช้เรต UV ที่ถูกต้อง
+      if (!quantity || quantity <= 0) {
+        return this._errorResult('industrialOffset', productType, specs, 'กรุณาระบุจำนวนที่ถูกต้อง');
+      }
+      if (!size || typeof size.width !== 'number' || typeof size.height !== 'number' ||
+          size.width <= 0 || size.height <= 0) {
+        return this._errorResult('industrialOffset', productType, specs, 'กรุณาระบุขนาดชิ้นงานที่ถูกต้อง');
+      }
+
+      // ชนิดหมึก: ใช้ค่าที่ผู้ใช้เลือก ไม่งั้นอนุมานจากวัสดุ
+      // (วัสดุที่ชื่อมี "UV" หรือเป็นแผ่นพลาสติก density → UV, นอกนั้นคอนเวนชั่นนัล)
+      let inkTypeOffset;
+      if (specs.inkType === 'uv' || specs.inkType === 'conventional') {
+        inkTypeOffset = specs.inkType;
+      } else {
+        const md = productTable.materials && productTable.materials[material];
+        const isUvMaterial = !!md && (
+          (typeof md.name === 'string' && md.name.indexOf('UV') !== -1) ||
+          (md.density && md.thicknessMm)
+        );
+        inkTypeOffset = isUvMaterial ? 'uv' : 'conventional';
+      }
+
+      // ขนาดเพลท: default ตัด 4 (MO 65×48 ซม.), เลือก ตัด 2 (SM74 74×53 ซม.) ได้
+      const plateClassOffset = (specs.plateClass === 'ตัด 2') ? 'ตัด 2' : 'ตัด 4';
+      const pressSheet = (plateClassOffset === 'ตัด 2')
+        ? { w: 74, h: 53 }
+        : { w: 65, h: 48 };
+
+      // Imposition n-up (Gripper 1.2, Side Lay 0.7, Bleed 0.6/แกน — ตาม imposition-layout.md)
+      const gripper = 1.2, sideLay = 0.7, bleed = 0.6;
+      const printableW = pressSheet.w - gripper;
+      const printableH = pressSheet.h - sideLay;
+      const fpW = size.width + bleed;
+      const fpH = size.height + bleed;
+      const nNormal = Math.floor(printableW / fpW) * Math.floor(printableH / fpH);
+      const nRotated = Math.floor(printableW / fpH) * Math.floor(printableH / fpW);
+      const nUp = Math.max(nNormal, nRotated);
+      if (!Number.isFinite(nUp) || nUp <= 0) {
+        return this._errorResult('industrialOffset', productType, specs,
+          'ชิ้นงานใหญ่เกินกว่าจะวางบนใบพิมพ์ได้');
+      }
+
+      // จำนวนใบพิมพ์ที่ต้องพิมพ์
+      const printSheetsNeeded = Math.ceil(quantity / nUp);
+
+      // ค่าพิมพ์ตามตาราง Heidelberg (ส่ง 'single' กันนับ multiplier ซ้ำ — colorCount รวมหน้า+หลังแล้ว)
+      const pcRes = this.calculatePrintCost(plateClassOffset, inkTypeOffset, printSheetsNeeded, colorCount, 'single');
+      printCost = pcRes.cost;
+      printLabel = 'ค่าพิมพ์ (' + pcRes.plateClassUsed + ' ' +
+        (inkTypeOffset === 'uv' ? 'UV' : 'คอนเวนชั่นนัล') + ', ' +
+        printSheetsNeeded.toLocaleString() + ' ใบ × ' + nUp + ' ชิ้น/ใบ)';
+    } else if (printData.flatRate !== undefined) {
       // New format: flatRate + overage
       const flatRate = printData.flatRate;
       const flatRateMaxQty = printData.flatRateMaxQty || 10000;
@@ -910,7 +966,7 @@ const PricingEngine = {
     // Build cost breakdown
     const costBreakdown = [];
     costBreakdown.push({ label: 'ค่าเพลท', amount: plateCost, conditional: false });
-    costBreakdown.push({ label: 'ค่าพิมพ์', amount: printCost, conditional: false });
+    costBreakdown.push({ label: printLabel, amount: printCost, conditional: false });
     costBreakdown.push({ label: paperLabel, amount: paperCost, conditional: false });
 
     // Add each finishing item as a separate line item
