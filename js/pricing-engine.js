@@ -163,25 +163,44 @@ const PricingEngine = {
   },
 
   /**
-   * คืนราคาวัสดุต่อ ตร.ซม. — รองรับ 2 แบบ
-   * (1) วัสดุปกติ: ใช้ pricePerSqCm ที่กำหนดไว้ตรงๆ
-   * (2) แผ่นพลาสติกไม่มีกาว: คิดจากน้ำหนัก
-   *     ราคา/ตร.ซม. = (ความหนา_ซม. × ค่าถ่วง × ราคา/กก.) ÷ 1000
-   *     โดย ความหนา_ซม. = thicknessMm ÷ 10
-   *     (มี field: density [g/cm³], thicknessMm [มม.], pricePerKg [บาท/กก.])
+   * ตัวคูณกำไรค่าวัสดุ (markup) — ราคาขายวัสดุ = ต้นทุน × MATERIAL_MARKUP
+   * ใช้กับระบบ industrialOffset ทุกวัสดุ (กระดาษ/สติกเกอร์/พลาสติก)
+   */
+  MATERIAL_MARKUP: 1.20,
+
+  /**
+   * คืน "ต้นทุน/ตร.ซม." ของวัสดุ — รองรับ 4 รูปแบบ (ตรวจตามลำดับ)
+   * (a) กระดาษคิดตามน้ำหนัก:  มี gsm + pricePerKg
+   *     ต้นทุน/ตร.ซม. = (gsm × pricePerKg) ÷ 1e7
+   *     เพราะ น้ำหนัก/ตร.ซม.(กรัม) = gsm ÷ 10000 และ ต่อกก. = ÷ 1000
+   * (b) แผ่นพลาสติกไม่มีกาว:  มี density + thicknessMm + pricePerKg
+   *     ต้นทุน/ตร.ซม. = (thicknessMm ÷ 10 × density × pricePerKg) ÷ 1000
+   * (c) สติกเกอร์/วัสดุแผ่น:  มี pricePerSheet + sheetAreaSqCm
+   *     ต้นทุน/ตร.ซม. = pricePerSheet ÷ sheetAreaSqCm
+   * (d) กำหนดต้นทุนต่อ ตร.ซม. มาตรง ๆ:  มี pricePerSqCm
+   * หมายเหตุ: ฟังก์ชันนี้คืน "ต้นทุน" ยังไม่บวก markup (ผู้เรียกคูณ MATERIAL_MARKUP เอง)
    * @param {object} materialData
-   * @returns {number|null} ราคาต่อ ตร.ซม. หรือ null ถ้าข้อมูลไม่พอ
+   * @returns {number|null} ต้นทุนต่อ ตร.ซม. หรือ null ถ้าข้อมูลไม่พอ
    */
   _materialPricePerSqCm(materialData) {
     if (!materialData) return null;
-    // แผ่นพลาสติกคิดตามน้ำหนัก
+    // (a) กระดาษคิดตามน้ำหนัก (แกรม × ราคา/กก.)
+    if (materialData.gsm && materialData.pricePerKg) {
+      return (materialData.gsm * materialData.pricePerKg) / 1e7;
+    }
+    // (b) แผ่นพลาสติกไม่มีกาวคิดตามน้ำหนัก
     if (materialData.density && materialData.thicknessMm && materialData.pricePerKg) {
       const thicknessCm = materialData.thicknessMm / 10;
       // น้ำหนักต่อ 1 ตร.ซม. (กรัม) = พื้นที่(1) × ความหนา_ซม. × ค่าถ่วง
       const gramsPerSqCm = thicknessCm * materialData.density;
-      // ราคา/ตร.ซม. = น้ำหนัก(กรัม) ÷ 1000 × ราคา/กก.
+      // ต้นทุน/ตร.ซม. = น้ำหนัก(กรัม) ÷ 1000 × ราคา/กก.
       return (gramsPerSqCm / 1000) * materialData.pricePerKg;
     }
+    // (c) สติกเกอร์/วัสดุแผ่น (ราคาต่อแผ่น ÷ พื้นที่แผ่น)
+    if (materialData.pricePerSheet && materialData.sheetAreaSqCm) {
+      return materialData.pricePerSheet / materialData.sheetAreaSqCm;
+    }
+    // (d) กำหนดต้นทุนต่อ ตร.ซม. มาตรง ๆ
     if (typeof materialData.pricePerSqCm === 'number') {
       return materialData.pricePerSqCm;
     }
@@ -932,51 +951,71 @@ const PricingEngine = {
       if (!materialData) {
         return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาวัสดุที่เลือก');
       }
-      // แผ่นพลาสติกไม่มีกาว: คิดราคาตามน้ำหนัก (ค่าถ่วง × ความหนา × ราคา/กก.)
+      // ต้นทุน/ตร.ซม. ตามชนิดวัสดุ (กระดาษตามแกรม / สติกเกอร์ตามราคาแผ่น / พลาสติกตามน้ำหนัก)
       const effPricePerSqCm = this._materialPricePerSqCm(materialData);
       if (effPricePerSqCm === null) {
         return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาวัสดุที่เลือก');
       }
-      // ค่าวัสดุ = ราคา/ตร.ซม. × พื้นที่ × (จำนวนชิ้น + วัสดุเผื่อเสียตั้งเครื่อง)
+      // ค่าวัสดุ = ต้นทุน/ตร.ซม. × พื้นที่ × (จำนวนชิ้น + วัสดุเผื่อเสียตั้งเครื่อง) × markup
       const materialPieces = quantity + stickerSpoiledPieces;
-      paperCost = effPricePerSqCm * area * materialPieces;
+      paperCost = effPricePerSqCm * area * materialPieces * this.MATERIAL_MARKUP;
       paperLabel = (stickerSpoiledPieces > 0)
         ? 'ค่าวัสดุ (รวมเผื่อเสีย ' + stickerSpoiledPieces.toLocaleString() + ' ชิ้น)'
         : 'ค่าวัสดุ';
     } else if (productType === 'box') {
-      // paperCost = pricePerSqCm × surfaceArea × qty
+      // ค่ากระดาษ = ต้นทุน/ตร.ซม. × พื้นที่ผิวกล่อง × จำนวน × markup
       const w = size.width;
       const h = size.height;
       const d = size.depth || 0;
       const surfaceArea = 2 * (w * h + w * d + h * d);
       const materialData = productTable.materials && productTable.materials[material];
-      if (!materialData || !materialData.pricePerSqCm) {
+      if (!materialData) {
         return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาวัสดุที่เลือก');
       }
-      paperCost = materialData.pricePerSqCm * surfaceArea * quantity;
+      const effPricePerSqCm = this._materialPricePerSqCm(materialData);
+      if (effPricePerSqCm === null) {
+        return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาวัสดุที่เลือก');
+      }
+      paperCost = effPricePerSqCm * surfaceArea * quantity * this.MATERIAL_MARKUP;
       paperLabel = 'ค่ากระดาษ';
     } else if (productType === 'brochure' || productType === 'leaflet') {
-      // paperCost = pricePerSheet × qty
+      // ค่ากระดาษ = ต้นทุน/ตร.ซม. × พื้นที่ชิ้นงาน × จำนวน × markup
       const paperData = productTable.paperTypes && productTable.paperTypes[material];
-      if (!paperData || !paperData.pricePerSheet) {
+      if (!paperData) {
         return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคากระดาษที่เลือก');
       }
-      paperCost = paperData.pricePerSheet * quantity;
+      const effPricePerSqCm = this._materialPricePerSqCm(paperData);
+      if (effPricePerSqCm === null) {
+        return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคากระดาษที่เลือก');
+      }
+      if (!size || typeof size.width !== 'number' || typeof size.height !== 'number') {
+        return this._errorResult('industrialOffset', productType, specs, 'กรุณาระบุขนาดชิ้นงานที่ถูกต้อง');
+      }
+      const pieceArea = size.width * size.height;
+      paperCost = effPricePerSqCm * pieceArea * quantity * this.MATERIAL_MARKUP;
       paperLabel = 'ค่ากระดาษ';
     } else if (productType === 'book' || productType === 'catalog') {
-      // paperCost = pricePerSheet × pageCount × qty + bindingCost
+      // ค่ากระดาษ = ต้นทุน/ตร.ซม. × พื้นที่ชิ้นงาน × จำนวนหน้า × จำนวน × markup (+ ค่าเข้าเล่ม ไม่บวก markup)
       const paperData = productTable.paperTypes && productTable.paperTypes[material];
-      if (!paperData || !paperData.pricePerSheet) {
+      if (!paperData) {
+        return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคากระดาษที่เลือก');
+      }
+      const effPricePerSqCm = this._materialPricePerSqCm(paperData);
+      if (effPricePerSqCm === null) {
         return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคากระดาษที่เลือก');
       }
       if (!pageCount || pageCount <= 0) {
         return this._errorResult('industrialOffset', productType, specs, 'กรุณาระบุจำนวนหน้า');
       }
+      if (!size || typeof size.width !== 'number' || typeof size.height !== 'number') {
+        return this._errorResult('industrialOffset', productType, specs, 'กรุณาระบุขนาดชิ้นงานที่ถูกต้อง');
+      }
       const bindingData = productTable.bindingTypes && productTable.bindingTypes[bindingType];
       if (!bindingData || !bindingData.costPerPage) {
         return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาประเภทเข้าเล่มที่เลือก');
       }
-      const sheetCost = paperData.pricePerSheet * pageCount * quantity;
+      const pieceArea = size.width * size.height;
+      const sheetCost = effPricePerSqCm * pieceArea * pageCount * quantity * this.MATERIAL_MARKUP;
       const bindingCost = bindingData.costPerPage * pageCount * quantity;
       paperCost = sheetCost + bindingCost;
       paperLabel = 'ค่ากระดาษ';

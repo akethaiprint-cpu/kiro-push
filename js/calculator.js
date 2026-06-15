@@ -1853,7 +1853,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Calculator.init();
   // แสดงเวอร์ชันที่โหลดจริง (ช่วยตรวจว่าเบราว์เซอร์โหลด JS ใหม่หรือยัง)
   try {
-    var APP_VERSION = 'v31';
+    var APP_VERSION = 'v32';
     var v1 = document.getElementById('appVersion');
     if (v1) v1.textContent = 'เวอร์ชัน ' + APP_VERSION;
     var v2 = document.getElementById('appVersionTop');

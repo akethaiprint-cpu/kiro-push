@@ -337,16 +337,21 @@ const StorageManager = {
             ]
           },
           materials: {
-            artPaper: { name: "กระดาษอาร์ท", pricePerSqCm: 0.004 },
-            pvc: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSqCm: 0.004 },
-            pp: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSqCm: 0.004 },
-            pet: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSqCm: 0.005 },
-            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSqCm: 0.004 },
+            // กระดาษ — ต้นทุนตามน้ำหนัก: { gsm, pricePerKg } → (gsm × ราคา/กก.) ÷ 1e7
+            artPaper: { name: "กระดาษอาร์ท 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artPaper128: { name: "กระดาษอาร์ท 128 แกรม", gsm: 128, pricePerKg: 32 },
+            artPaper157: { name: "กระดาษอาร์ท 157 แกรม", gsm: 157, pricePerKg: 32 },
+            // สติกเกอร์ — ต้นทุนตามราคาแผ่น OJI 106×70 ซม. (7420 ตร.ซม.) → ราคา/แผ่น ÷ 7420
+            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSheet: 18, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            pvc: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSheet: 28, sheetAreaSqCm: 7420 }, // PVC ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            pp: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSheet: 23, sheetAreaSqCm: 7420 }, // PP ขาวเงา OJI 23/แผ่น
+            pet: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSheet: 32, sheetAreaSqCm: 7420 }, // PET ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            foil: { name: "สติกเกอร์ฟอยล์ (หมึก UV)", pricePerSheet: 45, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            // แผ่นพลาสติกไม่มีกาว — ต้นทุนตามน้ำหนัก (ค่าถ่วง × ความหนา × ราคา/กก.)
             plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.2, pricePerKg: 80 },
             plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.3, pricePerKg: 80 },
             plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.4, pricePerKg: 80 },
-            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.5, pricePerKg: 80 },
-            foil: { name: "สติกเกอร์ฟอยล์ (หมึก UV)", pricePerSqCm: 0.006 }
+            plastic05: { name: "แผ่นพลาสติกไม่มีกาว 0.5 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.5, pricePerKg: 80 }
           },
           finishing: {
             laminate: { name: "เคลือบลามิเนต", pricePerSqCm: 0.002 },
@@ -364,24 +369,27 @@ const StorageManager = {
             ]
           },
           materials: {
-            artPaper: { name: "กระดาษอาร์ท 90 แกรม", pricePerSqCm: 0.004 },
-            artPaper128: { name: "กระดาษอาร์ท 128 แกรม", pricePerSqCm: 0.0045 },
-            artPaper157: { name: "กระดาษอาร์ท 157 แกรม", pricePerSqCm: 0.005 },
-            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม", pricePerSqCm: 0.006 },
-            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม", pricePerSqCm: 0.007 },
-            artCard300: { name: "อาร์ตการ์ด 2 หน้า 300 แกรม", pricePerSqCm: 0.008 },
-            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม", pricePerSqCm: 0.0065 },
-            ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", pricePerSqCm: 0.0085 },
-            bondPaper: { name: "กระดาษปอนด์ 80 แกรม", pricePerSqCm: 0.003 },
-            bond100: { name: "กระดาษปอนด์ 100 แกรม", pricePerSqCm: 0.0035 },
-            bond120: { name: "กระดาษปอนด์ 120 แกรม", pricePerSqCm: 0.004 },
-            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", pricePerSqCm: 0.006 },
-            greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", pricePerSqCm: 0.008 },
-            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSqCm: 0.006 },
-            stickerPVC: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSqCm: 0.010 },
-            stickerPP: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSqCm: 0.008 },
-            stickerPET: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSqCm: 0.012 },
-            foil: { name: "สติกเกอร์ฟอยล์ (หมึก UV)", pricePerSqCm: 0.014 },
+            // กระดาษ — ต้นทุนตามน้ำหนัก: { gsm, pricePerKg } → (gsm × ราคา/กก.) ÷ 1e7
+            artPaper: { name: "กระดาษอาร์ท 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artPaper128: { name: "กระดาษอาร์ท 128 แกรม", gsm: 128, pricePerKg: 32 },
+            artPaper157: { name: "กระดาษอาร์ท 157 แกรม", gsm: 157, pricePerKg: 32 },
+            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม", gsm: 210, pricePerKg: 34 },
+            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม", gsm: 260, pricePerKg: 34 },
+            artCard300: { name: "อาร์ตการ์ด 2 หน้า 300 แกรม", gsm: 300, pricePerKg: 34 },
+            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม", gsm: 230, pricePerKg: 32 },
+            ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", gsm: 300, pricePerKg: 32 },
+            bondPaper: { name: "กระดาษปอนด์ 80 แกรม", gsm: 80, pricePerKg: 30 },
+            bond100: { name: "กระดาษปอนด์ 100 แกรม", gsm: 100, pricePerKg: 30 },
+            bond120: { name: "กระดาษปอนด์ 120 แกรม", gsm: 120, pricePerKg: 30 },
+            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", gsm: 250, pricePerKg: 23.5 },
+            greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", gsm: 350, pricePerKg: 22.5 },
+            // สติกเกอร์ — ต้นทุนตามราคาแผ่น OJI 106×70 ซม. (7420 ตร.ซม.) → ราคา/แผ่น ÷ 7420
+            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSheet: 18, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            stickerPVC: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSheet: 28, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            stickerPP: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSheet: 23, sheetAreaSqCm: 7420 }, // PP ขาวเงา OJI 23/แผ่น
+            stickerPET: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSheet: 32, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            foil: { name: "สติกเกอร์ฟอยล์ (หมึก UV)", pricePerSheet: 45, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            // แผ่นพลาสติกไม่มีกาว — ต้นทุนตามน้ำหนัก
             plastic02: { name: "แผ่นพลาสติกไม่มีกาว 0.2 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.2, pricePerKg: 80 },
             plastic03: { name: "แผ่นพลาสติกไม่มีกาว 0.3 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.3, pricePerKg: 80 },
             plastic04: { name: "แผ่นพลาสติกไม่มีกาว 0.4 มม. (งานการ์ด)", density: 1.40, thicknessMm: 0.4, pricePerKg: 80 },
@@ -404,9 +412,14 @@ const StorageManager = {
             ]
           },
           materials: {
-            artCard: { name: "กระดาษอาร์ท", pricePerSqCm: 0.006 },
-            hardBoard: { name: "กระดาษกล่องแข็ง", pricePerSqCm: 0.010 },
-            corrugated: { name: "กระดาษลูกฟูก", pricePerSqCm: 0.013 }
+            // กล่อง: ใช้กระดาษหนาเป็นหลัก — ต้นทุนตามน้ำหนัก { gsm, pricePerKg }
+            artCard: { name: "อาร์ตการ์ด 2 หน้า 310 แกรม", gsm: 310, pricePerKg: 34 },
+            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม", gsm: 260, pricePerKg: 34 },
+            ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", gsm: 300, pricePerKg: 32 },
+            cardWhite300: { name: "กระดาษการ์ดขาว 300 แกรม", gsm: 300, pricePerKg: 34.5 },
+            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", gsm: 250, pricePerKg: 23.5 },
+            greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", gsm: 350, pricePerKg: 22.5 },
+            greyBack450: { name: "กล่องแป้งหลังเทา 450 แกรม", gsm: 450, pricePerKg: 22.5 }
           },
           finishing: {
             laminate: { name: "เคลือบลามิเนต", pricePerSqCm: 0.003 },
@@ -425,27 +438,28 @@ const StorageManager = {
             ]
           },
           paperTypes: {
-            bond70: { name: "ปอนด์ 70 แกรม", pricePerSheet: 0.55 },
-            bond80: { name: "ปอนด์ 80 แกรม", pricePerSheet: 0.60 },
-            bond100: { name: "ปอนด์ 100 แกรม", pricePerSheet: 0.80 },
-            bond120: { name: "ปอนด์ 120 แกรม", pricePerSheet: 0.95 },
-            artMatte90: { name: "อาร์ทด้าน 90 แกรม", pricePerSheet: 0.95 },
-            artGlossy90: { name: "อาร์ทเงา 90 แกรม", pricePerSheet: 0.95 },
-            artMatte128: { name: "อาร์ทด้าน 128 แกรม", pricePerSheet: 1.20 },
-            artGlossy128: { name: "อาร์ทเงา 128 แกรม", pricePerSheet: 1.20 },
-            artMatte157: { name: "อาร์ทด้าน 157 แกรม", pricePerSheet: 1.50 },
-            artGlossy157: { name: "อาร์ทเงา 157 แกรม", pricePerSheet: 1.50 },
-            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม", pricePerSheet: 2.00 },
-            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม", pricePerSheet: 2.40 },
-            artCard310: { name: "อาร์ตการ์ด 2 หน้า 310 แกรม", pricePerSheet: 2.90 },
-            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม", pricePerSheet: 2.20 },
-            ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", pricePerSheet: 2.80 },
-            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", pricePerSheet: 1.90 },
-            greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", pricePerSheet: 2.60 },
-            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSheet: 2.50 },
-            stickerPVC: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSheet: 3.50 },
-            stickerPP: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSheet: 3.20 },
-            stickerPET: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSheet: 4.00 }
+            // กระดาษ — ต้นทุนตามน้ำหนัก { gsm, pricePerKg }; สติกเกอร์ — ต้นทุนตามราคาแผ่น 7420 ตร.ซม.
+            bond70: { name: "ปอนด์ 70 แกรม", gsm: 70, pricePerKg: 30 },
+            bond80: { name: "ปอนด์ 80 แกรม", gsm: 80, pricePerKg: 30 },
+            bond100: { name: "ปอนด์ 100 แกรม", gsm: 100, pricePerKg: 30 },
+            bond120: { name: "ปอนด์ 120 แกรม", gsm: 120, pricePerKg: 30 },
+            artMatte90: { name: "อาร์ทด้าน 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artGlossy90: { name: "อาร์ทเงา 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artMatte128: { name: "อาร์ทด้าน 128 แกรม", gsm: 128, pricePerKg: 32 },
+            artGlossy128: { name: "อาร์ทเงา 128 แกรม", gsm: 128, pricePerKg: 32 },
+            artMatte157: { name: "อาร์ทด้าน 157 แกรม", gsm: 157, pricePerKg: 32 },
+            artGlossy157: { name: "อาร์ทเงา 157 แกรม", gsm: 157, pricePerKg: 32 },
+            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม", gsm: 210, pricePerKg: 34 },
+            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม", gsm: 260, pricePerKg: 34 },
+            artCard310: { name: "อาร์ตการ์ด 2 หน้า 310 แกรม", gsm: 310, pricePerKg: 34 },
+            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม", gsm: 230, pricePerKg: 32 },
+            ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", gsm: 300, pricePerKg: 32 },
+            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", gsm: 250, pricePerKg: 23.5 },
+            greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", gsm: 350, pricePerKg: 22.5 },
+            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSheet: 18, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            stickerPVC: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSheet: 28, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            stickerPP: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSheet: 23, sheetAreaSqCm: 7420 }, // PP ขาวเงา OJI 23/แผ่น
+            stickerPET: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSheet: 32, sheetAreaSqCm: 7420 } // ค่าประมาณ ปรับได้ในหน้าแอดมิน
           },
           standardSizes: ["A5", "A4", "A3"],
           finishing: {
@@ -465,27 +479,28 @@ const StorageManager = {
             ]
           },
           paperTypes: {
-            bond70: { name: "ปอนด์ 70 แกรม", pricePerSheet: 0.45 },
-            bond80: { name: "ปอนด์ 80 แกรม", pricePerSheet: 0.50 },
-            bond100: { name: "ปอนด์ 100 แกรม", pricePerSheet: 0.65 },
-            bond120: { name: "ปอนด์ 120 แกรม", pricePerSheet: 0.80 },
-            artMatte90: { name: "อาร์ทด้าน 90 แกรม", pricePerSheet: 0.80 },
-            artGlossy90: { name: "อาร์ทเงา 90 แกรม", pricePerSheet: 0.80 },
-            artMatte128: { name: "อาร์ทด้าน 128 แกรม", pricePerSheet: 1.00 },
-            artGlossy128: { name: "อาร์ทเงา 128 แกรม", pricePerSheet: 1.00 },
-            artMatte157: { name: "อาร์ทด้าน 157 แกรม", pricePerSheet: 1.30 },
-            artGlossy157: { name: "อาร์ทเงา 157 แกรม", pricePerSheet: 1.30 },
-            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม", pricePerSheet: 1.80 },
-            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม", pricePerSheet: 2.20 },
-            artCard310: { name: "อาร์ตการ์ด 2 หน้า 310 แกรม", pricePerSheet: 2.70 },
-            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม", pricePerSheet: 2.00 },
-            ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", pricePerSheet: 2.60 },
-            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", pricePerSheet: 1.70 },
-            greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", pricePerSheet: 2.40 },
-            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSheet: 2.30 },
-            stickerPVC: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSheet: 3.30 },
-            stickerPP: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSheet: 3.00 },
-            stickerPET: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSheet: 3.80 }
+            // กระดาษ — ต้นทุนตามน้ำหนัก { gsm, pricePerKg }; สติกเกอร์ — ต้นทุนตามราคาแผ่น 7420 ตร.ซม.
+            bond70: { name: "ปอนด์ 70 แกรม", gsm: 70, pricePerKg: 30 },
+            bond80: { name: "ปอนด์ 80 แกรม", gsm: 80, pricePerKg: 30 },
+            bond100: { name: "ปอนด์ 100 แกรม", gsm: 100, pricePerKg: 30 },
+            bond120: { name: "ปอนด์ 120 แกรม", gsm: 120, pricePerKg: 30 },
+            artMatte90: { name: "อาร์ทด้าน 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artGlossy90: { name: "อาร์ทเงา 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artMatte128: { name: "อาร์ทด้าน 128 แกรม", gsm: 128, pricePerKg: 32 },
+            artGlossy128: { name: "อาร์ทเงา 128 แกรม", gsm: 128, pricePerKg: 32 },
+            artMatte157: { name: "อาร์ทด้าน 157 แกรม", gsm: 157, pricePerKg: 32 },
+            artGlossy157: { name: "อาร์ทเงา 157 แกรม", gsm: 157, pricePerKg: 32 },
+            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม", gsm: 210, pricePerKg: 34 },
+            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม", gsm: 260, pricePerKg: 34 },
+            artCard310: { name: "อาร์ตการ์ด 2 หน้า 310 แกรม", gsm: 310, pricePerKg: 34 },
+            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม", gsm: 230, pricePerKg: 32 },
+            ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", gsm: 300, pricePerKg: 32 },
+            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", gsm: 250, pricePerKg: 23.5 },
+            greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", gsm: 350, pricePerKg: 22.5 },
+            stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSheet: 18, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            stickerPVC: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSheet: 28, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
+            stickerPP: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSheet: 23, sheetAreaSqCm: 7420 }, // PP ขาวเงา OJI 23/แผ่น
+            stickerPET: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSheet: 32, sheetAreaSqCm: 7420 } // ค่าประมาณ ปรับได้ในหน้าแอดมิน
           },
           standardSizes: ["A5", "A4", "A3"],
           finishing: {
@@ -506,19 +521,20 @@ const StorageManager = {
             ]
           },
           paperTypes: {
-            bond70: { name: "ปอนด์ 70 แกรม", pricePerSheet: 0.55 },
-            bond80: { name: "ปอนด์ 80 แกรม", pricePerSheet: 0.60 },
-            bond100: { name: "ปอนด์ 100 แกรม", pricePerSheet: 0.80 },
-            artMatte90: { name: "อาร์ทด้าน 90 แกรม", pricePerSheet: 0.95 },
-            artGlossy90: { name: "อาร์ทเงา 90 แกรม", pricePerSheet: 0.95 },
-            artMatte128: { name: "อาร์ทด้าน 128 แกรม", pricePerSheet: 1.20 },
-            artGlossy128: { name: "อาร์ทเงา 128 แกรม", pricePerSheet: 1.20 },
-            artMatte157: { name: "อาร์ทด้าน 157 แกรม", pricePerSheet: 1.50 },
-            artGlossy157: { name: "อาร์ทเงา 157 แกรม", pricePerSheet: 1.50 },
-            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม (ปก)", pricePerSheet: 2.00 },
-            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม (ปก)", pricePerSheet: 2.40 },
-            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม (ปก)", pricePerSheet: 2.20 },
-            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม (ปก)", pricePerSheet: 1.90 }
+            // กระดาษ — ต้นทุนตามน้ำหนัก { gsm, pricePerKg }
+            bond70: { name: "ปอนด์ 70 แกรม", gsm: 70, pricePerKg: 30 },
+            bond80: { name: "ปอนด์ 80 แกรม", gsm: 80, pricePerKg: 30 },
+            bond100: { name: "ปอนด์ 100 แกรม", gsm: 100, pricePerKg: 30 },
+            artMatte90: { name: "อาร์ทด้าน 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artGlossy90: { name: "อาร์ทเงา 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artMatte128: { name: "อาร์ทด้าน 128 แกรม", gsm: 128, pricePerKg: 32 },
+            artGlossy128: { name: "อาร์ทเงา 128 แกรม", gsm: 128, pricePerKg: 32 },
+            artMatte157: { name: "อาร์ทด้าน 157 แกรม", gsm: 157, pricePerKg: 32 },
+            artGlossy157: { name: "อาร์ทเงา 157 แกรม", gsm: 157, pricePerKg: 32 },
+            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม (ปก)", gsm: 210, pricePerKg: 34 },
+            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม (ปก)", gsm: 260, pricePerKg: 34 },
+            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม (ปก)", gsm: 230, pricePerKg: 32 },
+            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม (ปก)", gsm: 250, pricePerKg: 23.5 }
           },
           bindingTypes: {
             perfectBind: { name: "ไสกาว", costPerPage: 0.15 },
@@ -542,21 +558,22 @@ const StorageManager = {
             ]
           },
           paperTypes: {
-            bond80: { name: "ปอนด์ 80 แกรม", pricePerSheet: 0.60 },
-            bond100: { name: "ปอนด์ 100 แกรม", pricePerSheet: 0.80 },
-            artMatte90: { name: "อาร์ทด้าน 90 แกรม", pricePerSheet: 0.95 },
-            artGlossy90: { name: "อาร์ทเงา 90 แกรม", pricePerSheet: 0.95 },
-            artMatte128: { name: "อาร์ทด้าน 128 แกรม", pricePerSheet: 1.20 },
-            artGlossy128: { name: "อาร์ทเงา 128 แกรม", pricePerSheet: 1.20 },
-            artMatte157: { name: "อาร์ทด้าน 157 แกรม", pricePerSheet: 1.50 },
-            artGlossy157: { name: "อาร์ทเงา 157 แกรม", pricePerSheet: 1.50 },
-            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม", pricePerSheet: 2.00 },
-            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม", pricePerSheet: 2.40 },
-            artCard310: { name: "อาร์ตการ์ด 2 หน้า 310 แกรม", pricePerSheet: 2.90 },
-            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม", pricePerSheet: 2.20 },
-            ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", pricePerSheet: 2.80 },
-            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", pricePerSheet: 1.90 },
-            greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", pricePerSheet: 2.60 }
+            // กระดาษ — ต้นทุนตามน้ำหนัก { gsm, pricePerKg }
+            bond80: { name: "ปอนด์ 80 แกรม", gsm: 80, pricePerKg: 30 },
+            bond100: { name: "ปอนด์ 100 แกรม", gsm: 100, pricePerKg: 30 },
+            artMatte90: { name: "อาร์ทด้าน 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artGlossy90: { name: "อาร์ทเงา 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artMatte128: { name: "อาร์ทด้าน 128 แกรม", gsm: 128, pricePerKg: 32 },
+            artGlossy128: { name: "อาร์ทเงา 128 แกรม", gsm: 128, pricePerKg: 32 },
+            artMatte157: { name: "อาร์ทด้าน 157 แกรม", gsm: 157, pricePerKg: 32 },
+            artGlossy157: { name: "อาร์ทเงา 157 แกรม", gsm: 157, pricePerKg: 32 },
+            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม", gsm: 210, pricePerKg: 34 },
+            artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม", gsm: 260, pricePerKg: 34 },
+            artCard310: { name: "อาร์ตการ์ด 2 หน้า 310 แกรม", gsm: 310, pricePerKg: 34 },
+            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม", gsm: 230, pricePerKg: 32 },
+            ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", gsm: 300, pricePerKg: 32 },
+            greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", gsm: 250, pricePerKg: 23.5 },
+            greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", gsm: 350, pricePerKg: 22.5 }
           },
           bindingTypes: {
             perfectBind: { name: "ไสกาว", costPerPage: 0.15 },
