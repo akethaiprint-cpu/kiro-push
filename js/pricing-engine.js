@@ -810,6 +810,7 @@ const PricingEngine = {
     // ถ้าจำนวนเกิน flatRateMaxQty: (เหมา + ส่วนเกิน × overageRate) × จำนวนสี
     let printCost = 0;
     let printLabel = 'ค่าพิมพ์';
+    let stickerSpoiledPieces = 0; // วัสดุเผื่อเสียตั้งเครื่อง (ชิ้น) — รวมเข้าค่าวัสดุ
     const printData = productTable.printCost;
 
     if (!printData) {
@@ -867,8 +868,26 @@ const PricingEngine = {
           'ชิ้นงานใหญ่เกินกว่าจะวางบนใบพิมพ์ได้');
       }
 
-      // จำนวนใบพิมพ์ที่ต้องพิมพ์
-      const printSheetsNeeded = Math.ceil(quantity / nUp);
+      // จำนวนใบพิมพ์ขั้นต่ำ (ก่อนเผื่อเสีย)
+      const minSheets = Math.ceil(quantity / nUp);
+
+      // เผื่อเสียตั้งเครื่องพิมพ์ (makeready) — คิดเป็น % ตามชนิดหมึก/จำนวนสี
+      // (ไม่ใส่ขั้นต่ำจำนวนใบ เพราะงานสติกเกอร์คิดต่อชิ้น nUp สูง ขั้นต่ำจะเว่อร์)
+      let spoilRate;
+      if (inkTypeOffset === 'uv') {
+        spoilRate = this.SPOILAGE_PROFILES.uvOrPantone.rate;      // 0.10
+      } else if (colorCount >= 4) {
+        spoilRate = this.SPOILAGE_PROFILES.fourColorRepeat.rate;  // 0.08
+      } else if (colorCount <= 1) {
+        spoilRate = this.SPOILAGE_PROFILES.oneColorRepeat.rate;   // 0.03
+      } else {
+        spoilRate = this.SPOILAGE_PROFILES.twoColorGeneral.rate;  // 0.05
+      }
+      const spoilageSheets = Math.ceil(minSheets * spoilRate);
+
+      // จำนวนใบพิมพ์ที่ต้องพิมพ์จริง (รวมเผื่อเสีย) — ใช้คิดค่าพิมพ์และวัสดุ
+      const printSheetsNeeded = minSheets + spoilageSheets;
+      stickerSpoiledPieces = spoilageSheets * nUp;
 
       // ค่าพิมพ์ตามตาราง Heidelberg (ส่ง 'single' กันนับ multiplier ซ้ำ — colorCount รวมหน้า+หลังแล้ว)
       const pcRes = this.calculatePrintCost(plateClassOffset, inkTypeOffset, printSheetsNeeded, colorCount, 'single');
@@ -917,8 +936,12 @@ const PricingEngine = {
       if (effPricePerSqCm === null) {
         return this._errorResult('industrialOffset', productType, specs, 'ไม่พบข้อมูลราคาวัสดุที่เลือก');
       }
-      paperCost = effPricePerSqCm * area * quantity;
-      paperLabel = 'ค่าวัสดุ';
+      // ค่าวัสดุ = ราคา/ตร.ซม. × พื้นที่ × (จำนวนชิ้น + วัสดุเผื่อเสียตั้งเครื่อง)
+      const materialPieces = quantity + stickerSpoiledPieces;
+      paperCost = effPricePerSqCm * area * materialPieces;
+      paperLabel = (stickerSpoiledPieces > 0)
+        ? 'ค่าวัสดุ (รวมเผื่อเสีย ' + stickerSpoiledPieces.toLocaleString() + ' ชิ้น)'
+        : 'ค่าวัสดุ';
     } else if (productType === 'box') {
       // paperCost = pricePerSqCm × surfaceArea × qty
       const w = size.width;
