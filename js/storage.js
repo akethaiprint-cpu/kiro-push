@@ -339,12 +339,16 @@ const StorageManager = {
           materials: {
             // กระดาษ — ต้นทุนตามน้ำหนัก: { gsm, pricePerKg } → (gsm × ราคา/กก.) ÷ 1e7
             artPaper: { name: "กระดาษอาร์ท 90 แกรม", gsm: 90, pricePerKg: 32 },
+            artPaper120: { name: "กระดาษอาร์ท 120 แกรม", gsm: 120, pricePerKg: 32 },
             artPaper128: { name: "กระดาษอาร์ท 128 แกรม", gsm: 128, pricePerKg: 32 },
             artPaper157: { name: "กระดาษอาร์ท 157 แกรม", gsm: 157, pricePerKg: 32 },
             // สติกเกอร์ — ต้นทุนตามราคาแผ่น OJI 106×70 ซม. (7420 ตร.ซม.) → ราคา/แผ่น ÷ 7420
             stickerPaper: { name: "สติกเกอร์กระดาษ (หมึกคอนเวนชั่นนัล)", pricePerSheet: 18, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
             pvc: { name: "สติกเกอร์ PVC (หมึก UV)", pricePerSheet: 28, sheetAreaSqCm: 7420 }, // PVC ค่าประมาณ ปรับได้ในหน้าแอดมิน
-            pp: { name: "สติกเกอร์ PP (หมึก UV)", pricePerSheet: 23, sheetAreaSqCm: 7420 }, // PP ขาวเงา OJI 23/แผ่น
+            pp: { name: "สติกเกอร์ PP ขาวเงา (หมึก UV)", pricePerSheet: 23, sheetAreaSqCm: 7420 }, // OJI PP ขาวเงา 23/แผ่น
+            ppMatte: { name: "สติกเกอร์ PP ขาวด้าน (หมึก UV)", pricePerSheet: 24.25, sheetAreaSqCm: 7420 }, // OJI PP ขาวด้าน 24.25/แผ่น
+            ppWhiteMatteBack: { name: "สติกเกอร์ PP ขาวด้านหลังขาว (หมึก UV)", pricePerSheet: 13, sheetAreaSqCm: 7420 }, // OJI 13/แผ่น
+            ppWhiteGlossyBack: { name: "สติกเกอร์ PP ขาวเงาหลังขาว (หมึก UV)", pricePerSheet: 14.75, sheetAreaSqCm: 7420 }, // OJI 14.75/แผ่น
             pet: { name: "สติกเกอร์ PET (หมึก UV)", pricePerSheet: 32, sheetAreaSqCm: 7420 }, // PET ค่าประมาณ ปรับได้ในหน้าแอดมิน
             foil: { name: "สติกเกอร์ฟอยล์ (หมึก UV)", pricePerSheet: 45, sheetAreaSqCm: 7420 }, // ค่าประมาณ ปรับได้ในหน้าแอดมิน
             // แผ่นพลาสติกไม่มีกาว — ต้นทุนตามน้ำหนัก (ค่าถ่วง × ความหนา × ราคา/กก.)
@@ -412,14 +416,29 @@ const StorageManager = {
             ]
           },
           materials: {
-            // กล่อง: ใช้กระดาษหนาเป็นหลัก — ต้นทุนตามน้ำหนัก { gsm, pricePerKg }
+            // กล่อง: กระดาษหนา/การ์ด — ต้นทุนตามน้ำหนัก { gsm, pricePerKg }
             artCard: { name: "อาร์ตการ์ด 2 หน้า 310 แกรม", gsm: 310, pricePerKg: 34 },
+            artCard190: { name: "อาร์ตการ์ด 2 หน้า 190 แกรม", gsm: 190, pricePerKg: 34 },
+            artCard210: { name: "อาร์ตการ์ด 2 หน้า 210 แกรม", gsm: 210, pricePerKg: 34 },
+            artCard230: { name: "อาร์ตการ์ด 2 หน้า 230 แกรม", gsm: 230, pricePerKg: 34 },
             artCard260: { name: "อาร์ตการ์ด 2 หน้า 260 แกรม", gsm: 260, pricePerKg: 34 },
+            artCard300: { name: "อาร์ตการ์ด 2 หน้า 300 แกรม", gsm: 300, pricePerKg: 34 },
+            artCard350: { name: "อาร์ตการ์ด 2 หน้า 350 แกรม", gsm: 350, pricePerKg: 34 },
+            artCard400: { name: "อาร์ตการ์ด 2 หน้า 400 แกรม", gsm: 400, pricePerKg: 34 },
+            ivory230: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 230 แกรม", gsm: 230, pricePerKg: 32 },
+            ivory250: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 250 แกรม", gsm: 250, pricePerKg: 32 },
             ivory300: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 300 แกรม", gsm: 300, pricePerKg: 32 },
+            ivory350: { name: "อาร์ตการ์ด 1 หน้า (ไอวอรี่) 350 แกรม", gsm: 350, pricePerKg: 32 },
+            cardWhite230: { name: "กระดาษการ์ดขาว 230 แกรม", gsm: 230, pricePerKg: 34.5 },
+            cardWhite250: { name: "กระดาษการ์ดขาว 250 แกรม", gsm: 250, pricePerKg: 34.5 },
             cardWhite300: { name: "กระดาษการ์ดขาว 300 แกรม", gsm: 300, pricePerKg: 34.5 },
             greyBack250: { name: "กล่องแป้งหลังเทา 250 แกรม", gsm: 250, pricePerKg: 23.5 },
+            greyBack270: { name: "กล่องแป้งหลังเทา 270 แกรม", gsm: 270, pricePerKg: 23 },
+            greyBack300: { name: "กล่องแป้งหลังเทา 300 แกรม", gsm: 300, pricePerKg: 22.5 },
             greyBack350: { name: "กล่องแป้งหลังเทา 350 แกรม", gsm: 350, pricePerKg: 22.5 },
-            greyBack450: { name: "กล่องแป้งหลังเทา 450 แกรม", gsm: 450, pricePerKg: 22.5 }
+            greyBack400: { name: "กล่องแป้งหลังเทา 400 แกรม", gsm: 400, pricePerKg: 22.5 },
+            greyBack450: { name: "กล่องแป้งหลังเทา 450 แกรม", gsm: 450, pricePerKg: 22.5 },
+            whiteKraft117: { name: "ไวท์คราฟท์ 117 แกรม", gsm: 117, pricePerKg: 40 }
           },
           finishing: {
             laminate: { name: "เคลือบลามิเนต", pricePerSqCm: 0.003 },
