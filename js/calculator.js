@@ -436,6 +436,66 @@ const Calculator = {
   },
 
   /**
+   * แยกค่าจำนวนหลายเรตจากข้อความ (รองรับคั่นด้วย , เว้นวรรค หรือ /)
+   * @param {string|number} raw
+   * @returns {number[]} จำนวนเต็มบวก เรียงจากน้อยไปมาก ไม่ซ้ำ
+   */
+  _parseQuantities(raw) {
+    if (raw === undefined || raw === null) return [];
+    const list = String(raw)
+      .split(/[,\s/]+/)
+      .map(s => s.replace(/[^\d.]/g, '').trim())
+      .filter(s => s !== '')
+      .map(s => Math.round(Number(s)))
+      .filter(n => Number.isFinite(n) && n > 0);
+    // ไม่ซ้ำ + เรียงจากน้อยไปมาก
+    return Array.from(new Set(list)).sort((a, b) => a - b);
+  },
+
+  /**
+   * แสดงตารางเปรียบเทียบราคาหลายจำนวน (หลายเรต)
+   * @param {Array<{quantity:number, result:CalculationResult}>} items
+   */
+  renderMultiResult(items) {
+    const breakdownEl = document.getElementById('resultBreakdown');
+    const totalEl = document.getElementById('resultTotal');
+    if (!breakdownEl || !totalEl) return;
+
+    // หาเรตที่ราคาต่อชิ้นถูกที่สุด (ไว้ไฮไลต์)
+    let cheapest = null;
+    for (const it of items) {
+      const perPiece = it.result.totalPrice / it.quantity;
+      if (cheapest === null || perPiece < cheapest.perPiece) {
+        cheapest = { quantity: it.quantity, perPiece: perPiece };
+      }
+    }
+
+    let html = `<div class="result-item" style="font-weight:700;border-bottom:2px solid #1F4E79;">
+        <span class="result-item-label">จำนวน</span>
+        <span class="result-item-amount">ราคารวม &nbsp;|&nbsp; ต่อชิ้น</span>
+      </div>`;
+    for (const it of items) {
+      const total = it.result.totalPrice;
+      const perPiece = total / it.quantity;
+      const isCheap = cheapest && it.quantity === cheapest.quantity;
+      html += `<div class="result-item"${isCheap ? ' style="background:#C6EFCE;"' : ''}>
+        <span class="result-item-label">${it.quantity.toLocaleString()} ชิ้น${isCheap ? ' ⭐' : ''}</span>
+        <span class="result-item-amount">${PricingEngine.formatCurrency(total)} &nbsp;|&nbsp; ${PricingEngine.formatCurrency(perPiece)}/ชิ้น</span>
+      </div>`;
+    }
+    breakdownEl.innerHTML = html;
+
+    totalEl.innerHTML = `
+      <div class="result-unit-row">
+        <span class="result-unit-label">เปรียบเทียบ ${items.length} เรตจำนวน</span>
+        <span class="result-unit-amount">ราคาต่อชิ้นถูกสุดที่ ${cheapest.quantity.toLocaleString()} ชิ้น</span>
+      </div>`;
+
+    this._showSection('resultSection');
+    this._hideSection('errorDisplay');
+  },
+
+  /**
    * Render validation errors — display all errors simultaneously
    * @param {Array<{field: string, message: string}>} errors - Validation errors
    */
@@ -479,6 +539,12 @@ const Calculator = {
 
     // Collect form data
     const inputData = this._collectFormData();
+
+    // รองรับหลายเรตจำนวน — ใช้ค่าที่น้อยสุดเป็นตัวแทนตอนตรวจสอบความถูกต้อง
+    const qtyList = this._parseQuantities(inputData.quantity);
+    if (qtyList.length >= 1) {
+      inputData.quantity = String(qtyList[0]);
+    }
 
     // Paper calculator: skip Validator, just check required fields
     if (this.currentSystem === 'paperCalc') {
@@ -531,21 +597,29 @@ const Calculator = {
     // Build specs object for PricingEngine
     const specs = this._buildSpecs(inputData);
 
-    // Calculate
-    const result = PricingEngine.calculate(this.currentSystem, this.currentProduct, specs, this.priceTable);
-
-    if (!result.success) {
-      // Show calculation error
-      this.renderError([{ field: 'calculation', message: result.error || 'ไม่สามารถคำนวณราคาได้' }]);
-      return;
+    // คำนวณทุกเรตจำนวน (รองรับหลายเรต)
+    const quantities = (qtyList.length >= 1) ? qtyList : [specs.quantity];
+    const items = [];
+    for (const q of quantities) {
+      const qSpecs = Object.assign({}, specs, { quantity: q });
+      const r = PricingEngine.calculate(this.currentSystem, this.currentProduct, qSpecs, this.priceTable);
+      if (!r.success) {
+        this.renderError([{ field: 'calculation', message: 'จำนวน ' + q.toLocaleString() + ' ชิ้น: ' + (r.error || 'ไม่สามารถคำนวณราคาได้') }]);
+        return;
+      }
+      items.push({ quantity: q, result: r, specs: qSpecs });
     }
 
-    // Store last result and specs for printing
-    this.lastResult = result;
-    this.lastSpecs = specs;
+    // เก็บผลล่าสุดไว้สำหรับพิมพ์ใบเสนอราคา (ใช้เรตแรก)
+    this.lastResult = items[0].result;
+    this.lastSpecs = items[0].specs;
 
-    // Display result
-    this.renderResult(result);
+    // แสดงผล — เรตเดียวแสดงรายละเอียดเต็ม, หลายเรตแสดงตารางเปรียบเทียบ
+    if (items.length === 1) {
+      this.renderResult(items[0].result);
+    } else {
+      this.renderMultiResult(items);
+    }
   },
 
   /**
@@ -566,6 +640,12 @@ const Calculator = {
       // Collect current form data
       const inputData = this._collectFormData();
 
+      // รองรับหลายเรตจำนวนแบบเรียลไทม์
+      const qtyList = this._parseQuantities(inputData.quantity);
+      if (qtyList.length >= 1) {
+        inputData.quantity = String(qtyList[0]);
+      }
+
       // Validate
       const validation = Validator.validate(this.currentSystem, this.currentProduct, inputData);
 
@@ -574,22 +654,30 @@ const Calculator = {
         return;
       }
 
-      // Build specs and recalculate
+      // Build specs and recalculate (ทุกเรตจำนวน)
       const specs = this._buildSpecs(inputData);
-      const result = PricingEngine.calculate(this.currentSystem, this.currentProduct, specs, this.priceTable);
-
-      if (!result.success) {
-        // Requirement 11.5: display error but retain previous result
-        this.renderError([{ field: 'calculation', message: result.error || 'ไม่สามารถคำนวณราคาได้' }]);
-        return;
+      const quantities = (qtyList.length >= 1) ? qtyList : [specs.quantity];
+      const items = [];
+      for (const q of quantities) {
+        const qSpecs = Object.assign({}, specs, { quantity: q });
+        const r = PricingEngine.calculate(this.currentSystem, this.currentProduct, qSpecs, this.priceTable);
+        if (!r.success) {
+          // Requirement 11.5: retain previous result on failure
+          return;
+        }
+        items.push({ quantity: q, result: r, specs: qSpecs });
       }
 
-      // Update stored result and specs
-      this.lastResult = result;
-      this.lastSpecs = specs;
+      // Update stored result and specs (ใช้เรตแรก)
+      this.lastResult = items[0].result;
+      this.lastSpecs = items[0].specs;
 
       // Display updated result
-      this.renderResult(result);
+      if (items.length === 1) {
+        this.renderResult(items[0].result);
+      } else {
+        this.renderMultiResult(items);
+      }
     }, 500); // 500ms debounce (well within 1 second requirement)
   },
 
@@ -974,7 +1062,8 @@ const Calculator = {
       <div class="form-group">
         <div class="form-field">
           <label for="inputQuantity">จำนวน (ชิ้น)</label>
-          <input type="number" id="inputQuantity" name="quantity" min="${min}" max="${max}" step="1" placeholder="${min.toLocaleString()}–${max.toLocaleString()}" required>
+          <input type="text" inputmode="numeric" id="inputQuantity" name="quantity" data-min="${min}" data-max="${max}" placeholder="เช่น 1000 หรือหลายเรต 1000, 3000, 5000" required>
+          <small class="field-hint" style="color:#666;font-size:12px;">ใส่ได้หลายจำนวน คั่นด้วยจุลภาค (,) เพื่อเปรียบเทียบราคาหลายเรต</small>
         </div>
       </div>`;
   },
@@ -1853,7 +1942,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Calculator.init();
   // แสดงเวอร์ชันที่โหลดจริง (ช่วยตรวจว่าเบราว์เซอร์โหลด JS ใหม่หรือยัง)
   try {
-    var APP_VERSION = 'v33';
+    var APP_VERSION = 'v34';
     var v1 = document.getElementById('appVersion');
     if (v1) v1.textContent = 'เวอร์ชัน ' + APP_VERSION;
     var v2 = document.getElementById('appVersionTop');
