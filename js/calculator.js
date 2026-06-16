@@ -610,9 +610,10 @@ const Calculator = {
       items.push({ quantity: q, result: r, specs: qSpecs });
     }
 
-    // เก็บผลล่าสุดไว้สำหรับพิมพ์ใบเสนอราคา (ใช้เรตแรก)
+    // เก็บผลล่าสุดไว้สำหรับพิมพ์ใบเสนอราคา (ใช้เรตแรก + เก็บทุกเรตไว้พิมพ์รวม)
     this.lastResult = items[0].result;
     this.lastSpecs = items[0].specs;
+    this.lastMultiItems = (items.length > 1) ? items : null;
 
     // แสดงผล — เรตเดียวแสดงรายละเอียดเต็ม, หลายเรตแสดงตารางเปรียบเทียบ
     if (items.length === 1) {
@@ -668,9 +669,10 @@ const Calculator = {
         items.push({ quantity: q, result: r, specs: qSpecs });
       }
 
-      // Update stored result and specs (ใช้เรตแรก)
+      // Update stored result and specs (ใช้เรตแรก + เก็บทุกเรตไว้พิมพ์รวม)
       this.lastResult = items[0].result;
       this.lastSpecs = items[0].specs;
+      this.lastMultiItems = (items.length > 1) ? items : null;
 
       // Display updated result
       if (items.length === 1) {
@@ -691,7 +693,11 @@ const Calculator = {
       return;
     }
 
-    QuotationPrinter.print(this.lastResult, this.lastSpecs);
+    if (this.lastMultiItems && this.lastMultiItems.length > 1) {
+      QuotationPrinter.print(this.lastResult, this.lastSpecs, this.lastMultiItems);
+    } else {
+      QuotationPrinter.print(this.lastResult, this.lastSpecs);
+    }
   },
 
   /**
@@ -1942,12 +1948,24 @@ document.addEventListener('DOMContentLoaded', () => {
   Calculator.init();
   // แสดงเวอร์ชันที่โหลดจริง (ช่วยตรวจว่าเบราว์เซอร์โหลด JS ใหม่หรือยัง)
   try {
-    var APP_VERSION = 'v34';
+    var APP_VERSION = 'v35';
     var v1 = document.getElementById('appVersion');
     if (v1) v1.textContent = 'เวอร์ชัน ' + APP_VERSION;
     var v2 = document.getElementById('appVersionTop');
     if (v2) v2.textContent = '✓ โหลดเวอร์ชัน ' + APP_VERSION + ' แล้ว';
     console.log('ThaiPrint calculator ' + APP_VERSION + ' loaded');
+  } catch (e) { /* ignore */ }
+  // ปุ่มรีเซ็ตราคาเป็นค่าเริ่มต้น — ลบราคาที่บันทึกใน localStorage แล้วโหลดใหม่
+  try {
+    var resetBtn = document.getElementById('btnResetPrices');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        if (confirm('ต้องการรีเซ็ตราคาทั้งหมดเป็นค่าเริ่มต้นล่าสุดหรือไม่?\n(ลบราคาที่เคยบันทึกไว้ในเครื่องนี้ แล้วโหลดราคาตั้งต้นใหม่)')) {
+          try { localStorage.removeItem('tp_priceTable'); } catch (e) { /* ignore */ }
+          location.reload();
+        }
+      });
+    }
   } catch (e) { /* ignore */ }
 });
 

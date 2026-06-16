@@ -10,12 +10,12 @@ const QuotationPrinter = {
    * @param {CalculationResult} result - ผลคำนวณจาก PricingEngine
    * @param {object} specs - Print specifications (size, material, colorCount, quantity, etc.)
    */
-  print(result, specs) {
+  print(result, specs, multiItems) {
     if (!result || !result.success) {
       return;
     }
 
-    const html = this.generatePrintHTML(result, specs);
+    const html = this.generatePrintHTML(result, specs, multiItems);
 
     // Create a hidden iframe for printing
     const iframe = document.createElement('iframe');
@@ -61,7 +61,7 @@ const QuotationPrinter = {
    * @param {object} specs - Print specifications
    * @returns {string} Complete HTML document string
    */
-  generatePrintHTML(result, specs) {
+  generatePrintHTML(result, specs, multiItems) {
     const today = this.formatThaiDate(new Date());
     const formatCurrency = typeof PricingEngine !== 'undefined' && PricingEngine.formatCurrency
       ? PricingEngine.formatCurrency.bind(PricingEngine)
@@ -146,6 +146,25 @@ const QuotationPrinter = {
       }
     }
 
+    // ตารางราคาตามจำนวน (หลายเรต) — แสดงเมื่อมีหลายจำนวน
+    var rateTable = '';
+    if (multiItems && multiItems.length > 1) {
+      var rateRows = '';
+      for (var j = 0; j < multiItems.length; j++) {
+        var mi = multiItems[j];
+        var per = mi.result.totalPrice / mi.quantity;
+        rateRows += '<tr>' +
+          '<td style="padding: 6px 8px; border-bottom: 1px solid #eee;">' + mi.quantity.toLocaleString() + ' ชิ้น</td>' +
+          '<td style="padding: 6px 8px; border-bottom: 1px solid #eee; text-align: right;">' + formatCurrency(mi.result.totalPrice) + '</td>' +
+          '<td style="padding: 6px 8px; border-bottom: 1px solid #eee; text-align: right;">' + formatCurrency(per) + '</td>' +
+          '</tr>';
+      }
+      rateTable = '<div class="title" style="font-size: 15px; margin: 10px 0;">ราคาตามจำนวนสั่งซื้อ</div>' +
+        '<table class="cost-table">' +
+        '<thead><tr><th>จำนวน</th><th style="text-align: right;">ราคารวม</th><th style="text-align: right;">ราคา/ชิ้น</th></tr></thead>' +
+        '<tbody>' + rateRows + '</tbody></table>';
+    }
+
     var html = '<!DOCTYPE html>' +
       '<html lang="th">' +
       '<head>' +
@@ -198,6 +217,7 @@ const QuotationPrinter = {
       '<tr class="unit-price-row"><td style="padding: 6px 8px;">ราคาต่อหน่วย</td><td style="padding: 6px 8px; text-align: right;">' + formatCurrency(result.unitPrice) + '</td></tr>' +
       '</tbody>' +
       '</table>' +
+      rateTable +
       '<div class="footer">' +
       '<p>เอกสารนี้จัดทำโดยระบบคำนวณราคาอัตโนมัติ — ราคาอาจเปลี่ยนแปลงได้โดยไม่ต้องแจ้งล่วงหน้า</p>' +
       '</div>' +
