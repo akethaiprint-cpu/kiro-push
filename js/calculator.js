@@ -470,18 +470,34 @@ const Calculator = {
       }
     }
 
-    let html = `<div class="result-item" style="font-weight:700;border-bottom:2px solid #1F4E79;">
-        <span class="result-item-label">จำนวน</span>
-        <span class="result-item-amount">ราคารวม &nbsp;|&nbsp; ต่อชิ้น</span>
-      </div>`;
+    // แสดงรายละเอียดต้นทุนของแต่ละเรต (ค่าเพลท/ค่าพิมพ์/ค่าวัสดุ ฯลฯ) เพื่อตรวจสอบได้
+    let html = '';
     for (const it of items) {
-      const total = it.result.totalPrice;
+      const r = it.result;
+      const total = r.totalPrice;
       const perPiece = total / it.quantity;
       const isCheap = cheapest && it.quantity === cheapest.quantity;
-      html += `<div class="result-item"${isCheap ? ' style="background:#C6EFCE;"' : ''}>
-        <span class="result-item-label">${it.quantity.toLocaleString()} ชิ้น${isCheap ? ' ⭐' : ''}</span>
-        <span class="result-item-amount">${PricingEngine.formatCurrency(total)} &nbsp;|&nbsp; ${PricingEngine.formatCurrency(perPiece)}/ชิ้น</span>
-      </div>`;
+
+      html += `<div style="margin-bottom:14px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:6px;${isCheap ? 'background:#EAF7EE;border-color:#7BC68C;' : ''}">`;
+      // หัวเรต: จำนวน + ราคารวม + ต่อชิ้น
+      html += `<div class="result-item" style="font-weight:700;border-bottom:1px solid #1F4E79;padding-bottom:4px;margin-bottom:4px;">
+          <span class="result-item-label">${it.quantity.toLocaleString()} ชิ้น${isCheap ? ' ⭐ ถูกสุด/ชิ้น' : ''}</span>
+          <span class="result-item-amount">${PricingEngine.formatCurrency(total)} | ${PricingEngine.formatCurrency(perPiece)}/ชิ้น</span>
+        </div>`;
+      // รายละเอียดต้นทุนของเรตนี้
+      if (r.costBreakdown && r.costBreakdown.length > 0) {
+        for (const b of r.costBreakdown) {
+          if (b.conditional && b.amount <= 0) continue;
+          const val = b.unit
+            ? (b.amount.toLocaleString('th-TH', { maximumFractionDigits: 2 }) + ' ' + b.unit)
+            : (b.text ? b.text : PricingEngine.formatCurrency(b.amount));
+          html += `<div class="result-item" style="font-size:13px;color:#555;">
+              <span class="result-item-label">${b.label}</span>
+              <span class="result-item-amount">${val}</span>
+            </div>`;
+        }
+      }
+      html += `</div>`;
     }
     breakdownEl.innerHTML = html;
 
@@ -1948,7 +1964,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Calculator.init();
   // แสดงเวอร์ชันที่โหลดจริง (ช่วยตรวจว่าเบราว์เซอร์โหลด JS ใหม่หรือยัง)
   try {
-    var APP_VERSION = 'v35';
+    var APP_VERSION = 'v36';
     var v1 = document.getElementById('appVersion');
     if (v1) v1.textContent = 'เวอร์ชัน ' + APP_VERSION;
     var v2 = document.getElementById('appVersionTop');
