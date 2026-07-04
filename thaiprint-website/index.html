@@ -372,10 +372,10 @@ if(typeof localStorage!=='undefined'){
     if(O.print) for(const p of ['cut4','cut2']){ const s=O.print[p]; if(!s) continue;
       if(typeof s.plate==='number') PRINT_COST[p].plate=s.plate;
       for(const ink of ['conventional','uv']) if(s[ink]) Object.assign(PRINT_COST[p][ink], s[ink]); }
-    if(O.stickers) for(const k in O.stickers) if(STICKERS[k]) Object.assign(STICKERS[k], O.stickers[k]);
+    if(O.stickers) for(const k in O.stickers) STICKERS[k]=Object.assign(STICKERS[k]||{}, O.stickers[k]);
     if(Array.isArray(O.vinyl)) VINYL = O.vinyl;
     if(Array.isArray(O.stpvc)) STPVC = O.stpvc;
-    if(O.flat) for(const k in O.flat) if(FLAT[k]) Object.assign(FLAT[k], O.flat[k]);
+    if(O.flat) for(const k in O.flat) FLAT[k]=Object.assign(FLAT[k]||{}, O.flat[k]);
   }catch(e){}
 }
 

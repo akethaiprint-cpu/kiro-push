@@ -22,6 +22,12 @@
   .row{display:grid;grid-template-columns:1fr 130px 130px;gap:10px;align-items:center;margin-bottom:8px}
   .row .nm{font-size:14px}
   .row.h{font-size:12px;color:var(--muted);font-weight:700}
+  .irow{display:grid;grid-template-columns:1fr 100px 120px 40px;gap:8px;align-items:center;margin-bottom:6px}
+  .irow4{display:grid;grid-template-columns:1fr 90px 120px 80px 40px;gap:8px;align-items:center;margin-bottom:6px}
+  .colh{font-size:12px;color:var(--muted);margin:8px 0 4px}
+  .addbtn{margin-top:8px;font-size:13px;padding:7px 14px}
+  .delx{background:#fff;border:1px solid #f0c0c0;color:#c0392b;border-radius:7px;padding:6px;cursor:pointer;font-size:14px}
+  .delx:hover{background:#fdecec}
   input,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;font-family:inherit;font-size:14px;background:#fbfcfe}
   input:focus,select:focus{outline:none;border-color:var(--navy2);background:#fff}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;position:sticky;top:0;background:var(--bg);padding:12px 0;z-index:5;border-bottom:1px solid var(--line)}
@@ -136,14 +142,38 @@ function checkPin(){
 }
 
 /* ===== render ===== */
+const esc = v => String(v).replace(/"/g,'&quot;');
 const N = (path,val)=>'<input class="pf" data-t="num" data-path="'+path+'" type="number" step="any" value="'+val+'">';
+const T = (path,val)=>'<input class="pf" data-t="str" data-path="'+path+'" value="'+esc(val)+'">';
+const CSV = (path,arr)=>'<input class="pf" data-t="csv" data-path="'+path+'" value="'+(arr||[]).join(',')+'">';
+function inkSel(p,v){ return '<select class="pf" data-t="str" data-path="'+p+'"><option value="conventional"'+(v==='conventional'?' selected':'')+'>คอนเวนชั่นนัล</option><option value="uv"'+(v==='uv'?' selected':'')+'>UV</option></select>'; }
+function unitSel(p,v){ return '<select class="pf" data-t="str" data-path="'+p+'"><option value="perPiece"'+(v==='perPiece'?' selected':'')+'>บ./ชิ้น</option><option value="perSheet"'+(v==='perSheet'?' selected':'')+'>บ./ใบพิมพ์</option></select>'; }
+const delBtn = (cat,k)=>'<button class="delx" onclick="delItem(\''+cat+'\',\''+k+'\')" title="ลบรายการ">🗑️</button>';
+let seq = 1;
+
+/* เพิ่ม/ลบรายการ (เก็บค่าที่แก้ไว้ก่อน render ใหม่) */
+function addItem(cat){
+  data = collect();
+  const key = 'x' + (seq++);
+  if(cat==='papers')   data.papers[key]   = { name:'กระดาษใหม่', pricePerKg:30, gsms:[128] };
+  if(cat==='stickers') data.stickers[key] = { name:'วัสดุใหม่', ppc:0.004, ink:'uv' };
+  if(cat==='finishing')data.finishing[key]= { name:'งานหลังพิมพ์ใหม่', perPiece:0.10, min:200 };
+  render();
+}
+function delItem(cat,k){
+  if(!confirm('ลบรายการนี้?')) return;
+  data = collect(); delete data[cat][k]; render();
+}
+
 function render(){
   let h='';
-  // markup
+  // markup + papers (เพิ่ม/ลบได้)
   h+='<div class="card"><h3>กระดาษ (ต้นทุน บ./กก.) + Markup</h3>';
   h+='<div class="row"><div class="nm">ตัวคูณกำไรกระดาษ (markup)</div>'+N('paperMarkup',data.paperMarkup)+'<div></div></div>';
-  h+='<div class="row h"><div>ชนิดกระดาษ</div><div>บ./กก.</div><div></div></div>';
-  for(const k in data.papers) h+='<div class="row"><div class="nm">'+data.papers[k].name+'</div>'+N('papers.'+k+'.pricePerKg',data.papers[k].pricePerKg)+'<div></div></div>';
+  h+='<div class="colh">ชื่อกระดาษ | ต้นทุน บ./กก. | แกรมที่มี (คั่นด้วย , ) | ลบ</div>';
+  for(const k in data.papers){ const p=data.papers[k];
+    h+='<div class="irow">'+T('papers.'+k+'.name',p.name)+N('papers.'+k+'.pricePerKg',p.pricePerKg)+CSV('papers.'+k+'.gsms',p.gsms)+delBtn('papers',k)+'</div>'; }
+  h+='<button class="btn btn-ghost addbtn" onclick="addItem(\'papers\')">+ เพิ่มกระดาษ</button>';
   h+='</div>';
 
   // print rates
@@ -164,23 +194,22 @@ function render(){
   }
   h+='</div></div>';
 
-  // stickers
-  h+='<div class="card"><h3>วัสดุสติ๊กเกอร์ (Offset)</h3><div class="row h"><div>วัสดุ</div><div>บ./ตร.ซม.</div><div>หมึก</div></div>';
+  // stickers (เพิ่ม/ลบได้)
+  h+='<div class="card"><h3>วัสดุสติ๊กเกอร์ (Offset)</h3>';
+  h+='<div class="colh">ชื่อวัสดุ | บ./ตร.ซม. | หมึก | ลบ</div>';
   for(const k in data.stickers){ const s=data.stickers[k];
-    h+='<div class="row"><div class="nm">'+s.name+'</div>'+N('stickers.'+k+'.ppc',s.ppc)+
-       '<select class="pf" data-t="str" data-path="stickers.'+k+'.ink"><option value="conventional"'+(s.ink==='conventional'?' selected':'')+'>คอนเวนชั่นนัล</option><option value="uv"'+(s.ink==='uv'?' selected':'')+'>UV</option></select></div>';
-  }
+    h+='<div class="irow">'+T('stickers.'+k+'.name',s.name)+N('stickers.'+k+'.ppc',s.ppc)+inkSel('stickers.'+k+'.ink',s.ink)+delBtn('stickers',k)+'</div>'; }
+  h+='<button class="btn btn-ghost addbtn" onclick="addItem(\'stickers\')">+ เพิ่มวัสดุสติ๊กเกอร์</button>';
   h+='</div>';
 
-  // finishing
-  h+='<div class="card"><h3>ราคาหลังพิมพ์ <span style="font-size:12px;color:var(--muted)">(ยืนยันกับโรงงาน)</span></h3><div class="row h"><div>รายการ</div><div>ราคา</div><div>ขั้นต่ำ (บ.)</div></div>';
+  // finishing (เพิ่ม/ลบได้ + เลือกหน่วย)
+  h+='<div class="card"><h3>ราคาหลังพิมพ์ <span style="font-size:12px;color:var(--muted)">(ยืนยันกับโรงงาน)</span></h3>';
+  h+='<div class="colh">ชื่อรายการ | ราคา | หน่วย | ขั้นต่ำ (บ.) | ลบ</div>';
   for(const k in data.finishing){ const f=data.finishing[k];
     const isPiece = f.perPiece!==undefined;
-    const unit = isPiece?'บ./ชิ้น':'บ./ใบพิมพ์';
-    const path = isPiece?'finishing.'+k+'.perPiece':'finishing.'+k+'.perSheet';
     const val = isPiece?f.perPiece:f.perSheet;
-    h+='<div class="row"><div class="nm">'+f.name+' <span style="font-size:11px;color:var(--muted)">('+unit+')</span></div>'+N(path,val)+N('finishing.'+k+'.min',f.min)+'</div>';
-  }
+    h+='<div class="irow4">'+T('finishing.'+k+'.name',f.name)+N('finishing.'+k+'.__rate',val)+unitSel('finishing.'+k+'.__unit',isPiece?'perPiece':'perSheet')+N('finishing.'+k+'.min',f.min)+delBtn('finishing',k)+'</div>'; }
+  h+='<button class="btn btn-ghost addbtn" onclick="addItem(\'finishing\')">+ เพิ่มงานหลังพิมพ์</button>';
   h+='</div>';
 
   // inkjet
@@ -206,9 +235,20 @@ function setPath(o,path,val){ const ks=path.split('.'); let c=o; for(let i=0;i<k
 function collect(){
   const out=clone(data);
   document.querySelectorAll('.pf').forEach(inp=>{
-    let v=inp.value; if(inp.dataset.t==='num') v = v===''?0:Number(v);
+    let v=inp.value;
+    if(inp.dataset.t==='num') v = v===''?0:Number(v);
+    else if(inp.dataset.t==='csv') v = v.split(',').map(x=>Number(x.trim())).filter(n=>isFinite(n));
     setPath(out, inp.dataset.path, v);
   });
+  // แปลงหน่วยหลังพิมพ์กลับเป็น perPiece/perSheet
+  for(const k in out.finishing){ const f=out.finishing[k];
+    if(f.__unit!==undefined){
+      const rate = Number(f.__rate)||0;
+      if(f.__unit==='perSheet'){ f.perSheet=rate; delete f.perPiece; }
+      else { f.perPiece=rate; delete f.perSheet; }
+      delete f.__rate; delete f.__unit;
+    }
+  }
   return out;
 }
 function save(){

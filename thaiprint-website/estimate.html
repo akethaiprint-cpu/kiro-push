@@ -251,9 +251,9 @@ if(typeof localStorage!=='undefined'){
       for(const ink of ['conventional','uv']) if(s[ink]) Object.assign(PRINT_COST[p][ink], s[ink]); }
     if(typeof O.paperMarkup==='number') PAPER_MARKUP = O.paperMarkup;
     if(typeof O.spoilPerSide==='number') SPOIL_PER_SIDE = O.spoilPerSide;
-    if(O.papers) for(const k in O.papers) if(PAPERS[k]) Object.assign(PAPERS[k], O.papers[k]);
-    if(O.stickers) for(const k in O.stickers) if(STICKERS[k]) Object.assign(STICKERS[k], O.stickers[k]);
-    if(O.finishing) for(const k in O.finishing) if(FINISHING[k]) Object.assign(FINISHING[k], O.finishing[k]);
+    if(O.papers) for(const k in O.papers) PAPERS[k]=Object.assign(PAPERS[k]||{}, O.papers[k]);      // เพิ่ม/ทับ
+    if(O.stickers) for(const k in O.stickers) STICKERS[k]=Object.assign(STICKERS[k]||{}, O.stickers[k]);
+    if(O.finishing) for(const k in O.finishing) FINISHING[k]=Object.assign(FINISHING[k]||{}, O.finishing[k]);
   }catch(e){}
 }
 
