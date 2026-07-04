@@ -357,11 +357,14 @@ let STPVC = [[10,150,190],[Infinity,110,150]];
 const FLAT = { photo:{normal:250,rush:350}, canvas:{normal:400,rush:550}, fabric:{normal:300,rush:420} };
 /* วัสดุสติ๊กเกอร์ Offset (บ./ตร.ซม. ราคาขาย, ink) */
 const STICKERS = {
-  pvc:{ name:"สติ๊กเกอร์ PVC (หมึก UV)", ppc:0.004, ink:"uv" },
-  pp:{ name:"สติ๊กเกอร์ PP (หมึก UV)", ppc:0.004, ink:"uv" },
-  pet:{ name:"สติ๊กเกอร์ PET (หมึก UV)", ppc:0.005, ink:"uv" },
-  art:{ name:"สติ๊กเกอร์กระดาษอาร์ต (คอนเวนชั่นนัล)", ppc:0.004, ink:"conventional" },
-  paper:{ name:"สติ๊กเกอร์กระดาษ (คอนเวนชั่นนัล)", ppc:0.003, ink:"conventional" },
+  paper:        { name:"สติ๊กเกอร์กระดาษ (คอนเวนชั่นนัล)",   ppc:0.002911, ink:"conventional" },
+  pvc:          { name:"สติ๊กเกอร์ PVC (หมึก UV)",          ppc:0.004528, ink:"uv" },
+  ppGlossy:     { name:"สติ๊กเกอร์ PP ขาวเงา (UV)",         ppc:0.003720, ink:"uv" },
+  ppMatte:      { name:"สติ๊กเกอร์ PP ขาวด้าน (UV)",        ppc:0.003922, ink:"uv" },
+  ppGlossyBack: { name:"สติ๊กเกอร์ PP ขาวเงา หลังขาว (UV)",  ppc:0.002385, ink:"uv" },
+  ppMatteBack:  { name:"สติ๊กเกอร์ PP ขาวด้าน หลังขาว (UV)", ppc:0.002102, ink:"uv" },
+  pet:          { name:"สติ๊กเกอร์ PET (หมึก UV)",          ppc:0.005175, ink:"uv" },
+  foil:         { name:"สติ๊กเกอร์ฟอยล์ (UV)",              ppc:0.007278, ink:"uv" },
 };
 
 /* โหลดราคาจากหน้า admin (localStorage tp_priceTable) มาทับ default */

@@ -196,18 +196,23 @@ let SPOIL_PER_SIDE = 300;
 const PAPERS = {
   artGlossy:{ name:"อาร์ตมัน", pricePerKg:32, gsms:[90,105,128,130,157] },
   artMatte: { name:"อาร์ตด้าน", pricePerKg:32, gsms:[90,105,128,130,157] },
-  artCard:  { name:"อาร์ตการ์ด 2 หน้า", pricePerKg:39, gsms:[190,210,230,260,300,350] },
+  artCard:  { name:"อาร์ตการ์ด 2 หน้า", pricePerKg:34, gsms:[190,210,230,260,300,350,400] },
   ivory:    { name:"อาร์ตการ์ด 1 หน้า (ไอวอรี่)", pricePerKg:32, gsms:[230,250,300,350] },
+  cardWhite:{ name:"กระดาษการ์ดขาว", pricePerKg:34.5, gsms:[230,250,300] },
   bond:     { name:"กระดาษปอนด์", pricePerKg:30, gsms:[70,80,100,120] },
-  greyBack: { name:"กล่องแป้งหลังเทา", pricePerKg:23, gsms:[250,300,350,400] },
+  greyBack: { name:"กล่องแป้งหลังเทา", pricePerKg:23, gsms:[250,300,350,400,450] },
+  kraft:    { name:"ไวท์คราฟท์", pricePerKg:40, gsms:[117,125] },
 };
-/* วัสดุสติ๊กเกอร์ (บ./ตร.ซม. ราคาขาย, ink) */
+/* วัสดุสติ๊กเกอร์ — ppc = ราคา OJI/แผ่น (7420 ตร.ซม.) ÷ 7420 × markup 1.20 (บ./ตร.ซม. ราคาขาย) */
 const STICKERS = {
-  pvc:{ name:"สติ๊กเกอร์ PVC (UV)", ppc:0.004, ink:"uv" },
-  pp:{ name:"สติ๊กเกอร์ PP (UV)", ppc:0.004, ink:"uv" },
-  pet:{ name:"สติ๊กเกอร์ PET (UV)", ppc:0.005, ink:"uv" },
-  art:{ name:"สติ๊กเกอร์อาร์ต (คอนเวนชั่นนัล)", ppc:0.004, ink:"conventional" },
-  paper:{ name:"สติ๊กเกอร์กระดาษ (คอนเวนชั่นนัล)", ppc:0.003, ink:"conventional" },
+  paper:        { name:"สติ๊กเกอร์กระดาษ (คอนเวนชั่นนัล)",   ppc:0.002911, ink:"conventional" },
+  pvc:          { name:"สติ๊กเกอร์ PVC (UV)",               ppc:0.004528, ink:"uv" },
+  ppGlossy:     { name:"สติ๊กเกอร์ PP ขาวเงา (UV)",         ppc:0.003720, ink:"uv" },
+  ppMatte:      { name:"สติ๊กเกอร์ PP ขาวด้าน (UV)",        ppc:0.003922, ink:"uv" },
+  ppGlossyBack: { name:"สติ๊กเกอร์ PP ขาวเงา หลังขาว (UV)",  ppc:0.002385, ink:"uv" },
+  ppMatteBack:  { name:"สติ๊กเกอร์ PP ขาวด้าน หลังขาว (UV)", ppc:0.002102, ink:"uv" },
+  pet:          { name:"สติ๊กเกอร์ PET (UV)",               ppc:0.005175, ink:"uv" },
+  foil:         { name:"สติ๊กเกอร์ฟอยล์ (UV)",              ppc:0.007278, ink:"uv" },
 };
 
 /* หลังพิมพ์ (ราคาตัวอย่าง — ต้องยืนยันกับโรงงาน) */
@@ -314,8 +319,15 @@ function bestQuote(s){
 }
 
 /* ================= state + UI ================= */
-const ST = { step:1, qty:0 };
+const ST = { step:1, qty:0, docNo:null };
 const baht = n => "฿" + n.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+function today(){ const d=new Date(); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+(d.getFullYear()+543); }
+function genDocNo(){
+  const d=new Date();
+  const ymd=(d.getFullYear()+543).toString().slice(-2)+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  let n=1; try{ n=(parseInt(localStorage.getItem('tp_quoteSeq')||'0',10)||0)+1; localStorage.setItem('tp_quoteSeq',String(n)); }catch(e){}
+  return 'QT'+ymd+'-'+String(n).padStart(4,'0');
+}
 const el = id => document.getElementById(id);
 
 /* สร้างสเปกจากฟอร์มปัจจุบัน (ยังไม่ใส่ qty) */
@@ -402,6 +414,8 @@ function renderQuote(){
   const finTxt = r.finList.length ? r.finList.map(f=>f.name).join(', ') : '-';
   const pantone = el('pantone') && el('pantone').checked;
   const rows = [
+    ['เลขที่เอกสาร', ST.docNo],
+    ['วันที่', today()],
     ['หมวดงาน', cat],
     ['วัสดุ/กระดาษ', matName],
     ['ขนาด', s.wcm+' × '+s.hcm+' ซม.'],
@@ -443,8 +457,9 @@ function sendLine(){
 
 /* นำทางระหว่างขั้น */
 function go(n){
+  if(n===1) ST.docNo=null;           // เริ่มใบใหม่ → ออกเลขใหม่ตอนถึงขั้น 4
   if(n===2) renderQtyTable();
-  if(n===4){ if(!ST.qty){ alert('กรุณาเลือกจำนวนก่อน'); return; } renderQuote(); }
+  if(n===4){ if(!ST.qty){ alert('กรุณาเลือกจำนวนก่อน'); return; } if(!ST.docNo) ST.docNo=genDocNo(); renderQuote(); }
   ST.step=n;
   for(let i=1;i<=4;i++) el('p'+i).style.display = i===n?'block':'none';
   renderStepbar();
