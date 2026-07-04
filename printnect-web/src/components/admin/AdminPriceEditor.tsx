@@ -15,7 +15,6 @@ export default function AdminPriceEditor({
   initialTable: PriceTable;
 }) {
   const [json, setJson] = useState(() => JSON.stringify(initialTable, null, 2));
-  const [token, setToken] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
   async function reload() {
@@ -30,7 +29,6 @@ export default function AdminPriceEditor({
   }
 
   async function save() {
-    // ตรวจ JSON ฝั่ง client ก่อนส่ง
     let parsed: PriceTable;
     try {
       parsed = JSON.parse(json);
@@ -40,12 +38,10 @@ export default function AdminPriceEditor({
     }
     setStatus({ kind: "saving" });
     try {
+      // ใช้ session cookie (login แล้ว) — ไม่ต้องแนบ token เอง
       const res = await fetch("/api/price-table", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ priceTable: parsed }),
       });
       const data = await res.json();
@@ -68,22 +64,8 @@ export default function AdminPriceEditor({
   return (
     <div className="space-y-4">
       <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-        การบันทึกต้องใช้ <strong>Admin Token</strong> (ตั้งค่าใน <code>ADMIN_API_TOKEN</code>)
-        — ระบบจะสร้างตารางราคา<strong>เวอร์ชันใหม่</strong>และตั้งเป็นเวอร์ชันใช้งาน
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Admin Token
-        </label>
-        <input
-          type="password"
-          className={inputCls}
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-          placeholder="Bearer token สำหรับผู้ดูแล"
-          autoComplete="off"
-        />
+        กด <strong>บันทึกเวอร์ชันใหม่</strong> เพื่อสร้างตารางราคาเวอร์ชันใหม่และตั้งเป็นเวอร์ชันใช้งาน
+        (ยืนยันตัวตนด้วย session ที่เข้าสู่ระบบไว้แล้ว)
       </div>
 
       <div>
@@ -101,7 +83,7 @@ export default function AdminPriceEditor({
       <div className="flex items-center gap-3">
         <button
           onClick={save}
-          disabled={status.kind === "saving" || !token}
+          disabled={status.kind === "saving"}
           className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {status.kind === "saving" ? "กำลังบันทึก..." : "บันทึกเวอร์ชันใหม่"}

@@ -1,15 +1,22 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import AdminPriceEditor from "@/components/admin/AdminPriceEditor";
+import LogoutButton from "@/components/admin/LogoutButton";
 import { getActivePriceTable } from "@/lib/price-table/repository";
 import { getDefaultPriceTable } from "@/lib/price-table/default-price-table";
+import { verifySessionToken, SESSION_COOKIE } from "@/lib/auth/session";
 import type { PriceTable } from "@/domain/pricing/types";
 
 export const dynamic = "force-dynamic";
 
-// หมายเหตุความปลอดภัย: หน้านี้ยังไม่มี auth ระดับหน้า (ใครเปิดก็เห็น editor ได้)
-// แต่การ "บันทึก" ถูกป้องกันด้วย Admin Token ที่ฝั่ง API (Req 5.2)
-// งานต่อไป: เพิ่ม login/session เพื่อ gate หน้า admin ทั้งหน้า
+// gate ทั้งหน้าด้วย session — ไม่ login ถูกเด้งไป /login (Req 5.2)
 export default async function AdminPage() {
+  const cookieStore = await cookies();
+  if (!verifySessionToken(cookieStore.get(SESSION_COOKIE)?.value)) {
+    redirect("/login");
+  }
+
   let table: PriceTable;
   try {
     table = await getActivePriceTable();
@@ -24,9 +31,12 @@ export default async function AdminPage() {
           <h1 className="text-2xl font-bold">จัดการราคา (Admin)</h1>
           <p className="text-sm text-gray-500">แก้ไขตารางราคาแบบ versioned</p>
         </div>
-        <Link href="/" className="text-sm text-blue-600 hover:underline">
-          ← หน้าแรก
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/" className="text-sm text-blue-600 hover:underline">
+            หน้าแรก
+          </Link>
+          <LogoutButton />
+        </div>
       </header>
       <AdminPriceEditor initialTable={table} />
     </main>

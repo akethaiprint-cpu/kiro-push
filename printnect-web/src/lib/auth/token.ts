@@ -31,6 +31,18 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 
+/** รหัสผ่านสำหรับ login หน้า admin (ADMIN_PASSWORD หรือ fallback ADMIN_API_TOKEN) */
+export function getAdminPassword(): string | undefined {
+  return process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN;
+}
+
+/** ตรวจรหัสผ่าน login (timing-safe) — fail-closed ถ้าไม่ได้ตั้งค่า */
+export function checkAdminPassword(password: string): boolean {
+  const expected = getAdminPassword();
+  if (!expected) return false;
+  return safeEqual(password, expected);
+}
+
 /** true เมื่อคำขอมีสิทธิ์ผู้ดูแล */
 export function isAuthorized(req: HeaderCarrier): boolean {
   const token = getAdminToken();
