@@ -1,0 +1,59 @@
+# ── วิธีเปิดใช้งาน CI นี้ ──
+# ไฟล์นี้ถูกเก็บไว้นอก .github/workflows/ เพราะ token ที่ push ไม่มี scope `workflow`
+# การเปิดใช้: คัดลอกไฟล์นี้ไปที่ repo-root `.github/workflows/printnect-ci.yml`
+#   - ผ่านหน้าเว็บ GitHub (Add file → Create new file) ไม่ต้องใช้ scope พิเศษ, หรือ
+#   - push ด้วย token ที่มี scope `workflow` (classic) เพิ่ม
+name: PrintNect CI
+
+# รันเฉพาะเมื่อไฟล์ใน printnect-web/ เปลี่ยน (ไม่กระทบเว็บเดิมที่ root)
+on:
+  push:
+    paths:
+      - "printnect-web/**"
+      - ".github/workflows/printnect-ci.yml"
+  pull_request:
+    paths:
+      - "printnect-web/**"
+
+defaults:
+  run:
+    working-directory: printnect-web
+
+env:
+  # ค่า dummy สำหรับ prisma generate/build (ไม่ query DB จริงตอน build)
+  DATABASE_URL: "file:./ci.db"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: printnect-web/package-lock.json
+      - run: npm ci
+      - run: npm run prisma:generate
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: printnect-web/package-lock.json
+      - run: npm ci
+      - run: npm run prisma:generate
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run test:e2e

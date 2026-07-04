@@ -1,7 +1,11 @@
 node_modules/
 .kiro/
-tests/
-package.json
-package-lock.json
-vitest.config.js
 .DS_Store
+
+# Legacy vanilla-JS app (root only) — kept local, not pushed to GitHub Pages
+/tests/
+/package.json
+/package-lock.json
+/vitest.config.js
+
+# PrintNect (Next.js rebuild) lives under printnect-web/ and has its own .gitignore

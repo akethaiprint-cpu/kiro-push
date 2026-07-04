@@ -1,0 +1,38 @@
+// Prisma schema สำหรับ PrintNect
+// datasource: SQLite สำหรับ dev/CI (ไม่ต้องตั้ง server)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// ตารางราคาแบบ versioned — เก็บข้อมูลราคาทั้งระบบเป็น JSON string
+model PriceTable {
+  id        String   @id @default(cuid())
+  version   Int
+  data      String // JSON ของ Price_Table (พอร์ตจาก getDefaultPriceTable)
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+/// ใบเสนอราคาที่บันทึกไว้
+model Quotation {
+  id          String   @id @default(cuid())
+  system      String
+  productType String
+  specs       String // JSON
+  result      String // JSON
+  createdAt   DateTime @default(now())
+}
+
+/// ผู้ใช้สำหรับหน้า admin (แก้ไขราคา — ต้องยืนยันตัวตน)
+model User {
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String
+  role         String @default("admin")
+}
