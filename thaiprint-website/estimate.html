@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ประเมินราคางานพิมพ์ — Thai Print Inter Group</title>
+<meta name="description" content="Wizard ประเมินราคางานพิมพ์ออฟเซ็ต 4 ขั้นตอน เลือกหมวด กระดาษ สี ขนาด หลังพิมพ์ ได้ราคาและใบเสนอราคาทันที" />
+<style>
+  :root{
+    --navy:#12284c; --navy2:#1c3a6e; --orange:#f7941d; --orange2:#e07c00;
+    --teal:#12b3a6; --bg:#f4f6fb; --line:#e3e8f0; --ink:#1f2937; --muted:#6b7280; --white:#fff;
+    --radius:12px; --shadow:0 6px 24px rgba(18,40,76,.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:8px;padding:10px 20px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+  .btn-orange{background:var(--orange);color:#fff}.btn-orange:hover{background:var(--orange2)}
+  .btn-teal{background:var(--teal);color:#fff}.btn-teal:hover{filter:brightness(.94)}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}.btn-ghost:hover{background:var(--bg)}
+
+  header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
+  header .wrap{display:flex;align-items:center;justify-content:space-between;height:62px;max-width:1140px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;color:var(--navy)}
+  .logo .mark{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;display:grid;place-items:center}
+  .logo .mark b{color:var(--orange)}
+
+  .crumb{color:var(--muted);font-size:14px;margin:18px 0}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px;margin-bottom:40px}
+
+  /* step indicator */
+  .steps{display:flex;align-items:center;margin-bottom:28px}
+  .steps .s{display:flex;align-items:center;flex:1}
+  .steps .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:#e5e9f0;color:var(--muted);flex:none}
+  .steps .s.active .n{background:var(--teal);color:#fff}
+  .steps .s.done .n{background:#c9efec;color:var(--teal)}
+  .steps .lb{margin-left:8px;font-size:14px;color:var(--muted)}
+  .steps .s.active .lb{color:var(--teal);font-weight:700}
+  .steps .bar{height:2px;background:var(--line);flex:1;margin:0 10px}
+
+  h2.step-title{font-size:20px;color:var(--navy);margin-bottom:18px}
+  .grid{display:grid;grid-template-columns:150px 1fr;gap:14px 16px;align-items:center}
+  .grid .lbl{font-size:14px;color:var(--navy);font-weight:600}
+  .grid .lbl .req{color:var(--orange)}
+  input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:15px;background:#fbfcfe}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy2);background:#fff}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .fin-box{display:flex;flex-wrap:wrap;gap:8px}
+  .fin-box label{display:flex;align-items:center;gap:6px;font-size:14px;background:#fbfcfe;border:1px solid var(--line);border-radius:20px;padding:6px 12px;cursor:pointer}
+  .fin-box label:hover{border-color:var(--teal)}
+  .actions{display:flex;justify-content:space-between;margin-top:24px}
+
+  /* qty table */
+  table.qty{width:100%;border-collapse:collapse;font-size:15px}
+  table.qty th,table.qty td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right}
+  table.qty th:first-child,table.qty td:first-child{text-align:left}
+  table.qty tr.sel{background:#e8faf7}
+  table.qty tbody tr{cursor:pointer}
+  table.qty tbody tr:hover{background:#f6f9ff}
+  .tag-machine{font-size:12px;background:#eef2f8;color:var(--navy);padding:2px 8px;border-radius:10px}
+
+  /* summary */
+  .sum table{width:100%;font-size:15px}
+  .sum td{padding:6px 0;border-bottom:1px solid var(--line)}
+  .sum td:last-child{text-align:right}
+  .sum .total{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:2px solid var(--navy)}
+  .sum .total b{font-size:26px;color:var(--orange2)}
+  .qbox{border:1px solid var(--line);border-radius:10px;padding:18px;background:var(--bg)}
+  .muted{color:var(--muted);font-size:14px}
+  @media print{ header,.crumb,.steps,.actions,.noprint{display:none!important} .card{box-shadow:none;border:none} }
+  @media(max-width:640px){ .grid{grid-template-columns:1fr} .steps .lb{display:none} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a href="index.html" class="logo"><span class="mark"><b>T</b>P</span> Thai Print<span style="color:var(--orange)">Inter</span></a>
+    <a href="index.html" class="btn btn-ghost">← หน้าแรก</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="crumb">หน้าแรก » ประเมินราคางานพิมพ์</div>
+  <div class="card">
+    <!-- step indicator -->
+    <div class="steps" id="stepbar"></div>
+
+    <!-- STEP 1 -->
+    <div class="pane" id="p1">
+      <h2 class="step-title">① เลือกและกำหนดหมวดงานพิมพ์</h2>
+      <div class="grid">
+        <div class="lbl">หมวดงานพิมพ์ <span class="req">*</span></div>
+        <select id="cat" onchange="onCat()"></select>
+
+        <div class="lbl" id="matLbl">กระดาษ <span class="req">*</span></div>
+        <div id="matWrap"></div>
+
+        <div class="lbl">ด้านหน้าพิมพ์ <span class="req">*</span></div>
+        <div class="two">
+          <input id="front" type="number" min="0" max="8" value="4" title="สีด้านหน้า">
+          <input id="back" type="number" min="0" max="8" value="0" title="สีด้านหลัง (0 = พิมพ์หน้าเดียว)">
+        </div>
+
+        <div class="lbl">ขนาด <span class="req">*</span></div>
+        <div>
+          <select id="size" onchange="onSize()"></select>
+          <div class="two" id="customSize" style="margin-top:8px;display:none">
+            <input id="w" type="number" step="0.1" placeholder="กว้าง (ซม.)">
+            <input id="h" type="number" step="0.1" placeholder="สูง (ซม.)">
+          </div>
+        </div>
+
+        <div class="lbl">หลังพิมพ์</div>
+        <div class="fin-box" id="finBox"></div>
+
+        <div class="lbl">สีพิเศษ</div>
+        <div><label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="checkbox" id="pantone"> มีสีพิเศษ/Pantone (ระบุในใบเสนอราคา — ไม่กระทบราคาประเมิน)</label></div>
+      </div>
+      <div class="actions">
+        <span></span>
+        <button class="btn btn-teal" onclick="go(2)">ขั้นตอนต่อไป ›</button>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="pane" id="p2" style="display:none">
+      <h2 class="step-title">② เลือกจำนวนและราคา</h2>
+      <p class="muted" style="margin-bottom:12px">ระบบเลือกเครื่องที่คุ้มที่สุดให้อัตโนมัติ (ตัด 4 / ตัด 2) — คลิกเลือกจำนวน หรือกรอกเอง</p>
+      <table class="qty">
+        <thead><tr><th>จำนวน (ชิ้น)</th><th>เครื่อง</th><th>ราคารวม</th><th>ราคา/ชิ้น</th></tr></thead>
+        <tbody id="qtyRows"></tbody>
+      </table>
+      <div class="grid" style="margin-top:16px;grid-template-columns:150px 1fr">
+        <div class="lbl">กรอกจำนวนเอง</div>
+        <div class="two">
+          <input id="customQty" type="number" min="1" placeholder="เช่น 3000">
+          <button class="btn btn-ghost" onclick="useCustomQty()">ใช้จำนวนนี้</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="go(1)">‹ ย้อนกลับ</button>
+        <button class="btn btn-teal" onclick="go(3)" id="toStep3" disabled>ขั้นตอนต่อไป ›</button>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="pane" id="p3" style="display:none">
+      <h2 class="step-title">③ ข้อมูลสินค้าและผู้ติดต่อ</h2>
+      <div class="grid">
+        <div class="lbl">ชื่องาน</div><input id="jobName" placeholder="เช่น ใบปลิวโปรโมชัน">
+        <div class="lbl">ชื่อผู้ติดต่อ</div><input id="cName" placeholder="ชื่อ-นามสกุล">
+        <div class="lbl">เบอร์โทร</div><input id="cPhone" placeholder="0X-XXX-XXXX">
+        <div class="lbl">หมายเหตุ</div><textarea id="note" rows="3"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="go(2)">‹ ย้อนกลับ</button>
+        <button class="btn btn-teal" onclick="go(4)">ดูใบเสนอราคา ›</button>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="pane" id="p4" style="display:none">
+      <h2 class="step-title">④ สรุปใบเสนอราคา</h2>
+      <div id="quoteArea" class="sum"></div>
+      <div class="actions noprint">
+        <button class="btn btn-ghost" onclick="go(3)">‹ ย้อนกลับ</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="copyQuote()">📋 คัดลอก</button>
+          <button class="btn btn-ghost" onclick="window.print()">🖨️ พิมพ์ PDF</button>
+          <button class="btn btn-teal" onclick="sendLine()">💬 ส่ง LINE</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= ค่าคงที่ราคา (ตรงกับ print-pricing-master) ================= */
+const PRINT_COST = {
+  cut4:{ plate:300, conventional:{flat:900, upTo:10000, over:0.10}, uv:{flat:1500, upTo:1000,  over:1.00} },
+  cut2:{ plate:600, conventional:{flat:1200,upTo:10000, over:0.20}, uv:{flat:2000, upTo:10000, over:1.50} },
+};
+function spoilRate(ink, colors){
+  if(ink==='uv') return 0.10;
+  if(colors>=4)  return 0.08;
+  if(colors===1) return 0.03;
+  return 0.05;
+}
+let PAPER_MARKUP = 1.20;
+/* เผื่อเสียตั้งเครื่อง — กติกาโรงงาน 300 ใบ/ด้าน (พิมพ์ 2 ด้าน = ×2) */
+let SPOIL_PER_SIDE = 300;
+
+/* กระดาษ (ต้นทุน บ./กก. อ้างอิงสกิล paper-price) */
+const PAPERS = {
+  artGlossy:{ name:"อาร์ตมัน", pricePerKg:32, gsms:[90,105,128,130,157] },
+  artMatte: { name:"อาร์ตด้าน", pricePerKg:32, gsms:[90,105,128,130,157] },
+  artCard:  { name:"อาร์ตการ์ด 2 หน้า", pricePerKg:39, gsms:[190,210,230,260,300,350] },
+  ivory:    { name:"อาร์ตการ์ด 1 หน้า (ไอวอรี่)", pricePerKg:32, gsms:[230,250,300,350] },
+  bond:     { name:"กระดาษปอนด์", pricePerKg:30, gsms:[70,80,100,120] },
+  greyBack: { name:"กล่องแป้งหลังเทา", pricePerKg:23, gsms:[250,300,350,400] },
+};
+/* วัสดุสติ๊กเกอร์ (บ./ตร.ซม. ราคาขาย, ink) */
+const STICKERS = {
+  pvc:{ name:"สติ๊กเกอร์ PVC (UV)", ppc:0.004, ink:"uv" },
+  pp:{ name:"สติ๊กเกอร์ PP (UV)", ppc:0.004, ink:"uv" },
+  pet:{ name:"สติ๊กเกอร์ PET (UV)", ppc:0.005, ink:"uv" },
+  art:{ name:"สติ๊กเกอร์อาร์ต (คอนเวนชั่นนัล)", ppc:0.004, ink:"conventional" },
+  paper:{ name:"สติ๊กเกอร์กระดาษ (คอนเวนชั่นนัล)", ppc:0.003, ink:"conventional" },
+};
+
+/* หลังพิมพ์ (ราคาตัวอย่าง — ต้องยืนยันกับโรงงาน) */
+const FINISHING = {
+  laminateGlossy:{ name:"เคลือบเงา", perSheet:1.0, min:300 },
+  laminateMatte: { name:"เคลือบด้าน", perSheet:1.0, min:300 },
+  spotUV:        { name:"Spot UV", perSheet:2.0, min:500 },
+  fold:          { name:"พับ", perPiece:0.10, min:200 },
+  dieCut:        { name:"ไดคัท", perPiece:0.30, min:500 },
+  emboss:        { name:"ปั๊มนูน", perPiece:0.50, min:500 },
+  foilStamp:     { name:"ปั๊มเคทอง/เงิน", perPiece:0.60, min:600 },
+  numbering:     { name:"รันนัมเบอร์", perPiece:0.15, min:200 },
+  perforate:     { name:"ปรุฉีก", perPiece:0.10, min:200 },
+};
+
+const QTY_PRESET = [100, 250, 500, 1000, 2000, 5000, 10000];
+const PRESET_SIZES = {
+  A3:{label:"A3 (29.7×42 ซม.)",w:29.7,h:42}, A4:{label:"A4 (21×29.7 ซม.)",w:21,h:29.7},
+  A5:{label:"A5 (14.8×21 ซม.)",w:14.8,h:21}, A6:{label:"A6 (10.5×14.8 ซม.)",w:10.5,h:14.8},
+  namecard:{label:"นามบัตร (9×5.4 ซม.)",w:9,h:5.4}, dl:{label:"DL (10×21 ซม.)",w:10,h:21},
+  custom:{label:"กำหนดขนาดเอง",w:0,h:0},
+};
+
+const CAT_LABEL = { flyer:"ใบปลิว", leaflet:"แผ่นพับ", poster:"โปสเตอร์", card:"นามบัตร", letterhead:"หัวจดหมาย", sticker:"สติ๊กเกอร์/ฉลาก" };
+const CAT_CFG = {
+  flyer:{ mat:"paper", paper:"artGlossy", gsm:130, size:"A5" },
+  leaflet:{ mat:"paper", paper:"artMatte", gsm:128, size:"A4" },
+  poster:{ mat:"paper", paper:"artGlossy", gsm:157, size:"A3" },
+  card:{ mat:"paper", paper:"artCard", gsm:260, size:"namecard" },
+  letterhead:{ mat:"paper", paper:"bond", gsm:100, size:"A4" },
+  sticker:{ mat:"sticker", sticker:"pvc", size:"custom", w:5, h:5 },
+};
+const LINE_ID = "@thaiprint";
+
+/* โหลดราคาจากหน้า admin (localStorage tp_priceTable) มาทับ default */
+if(typeof localStorage!=='undefined'){
+  try{
+    const O = JSON.parse(localStorage.getItem('tp_priceTable')||'{}');
+    if(O.print) for(const p of ['cut4','cut2']){ const s=O.print[p]; if(!s) continue;
+      if(typeof s.plate==='number') PRINT_COST[p].plate=s.plate;
+      for(const ink of ['conventional','uv']) if(s[ink]) Object.assign(PRINT_COST[p][ink], s[ink]); }
+    if(typeof O.paperMarkup==='number') PAPER_MARKUP = O.paperMarkup;
+    if(typeof O.spoilPerSide==='number') SPOIL_PER_SIDE = O.spoilPerSide;
+    if(O.papers) for(const k in O.papers) if(PAPERS[k]) Object.assign(PAPERS[k], O.papers[k]);
+    if(O.stickers) for(const k in O.stickers) if(STICKERS[k]) Object.assign(STICKERS[k], O.stickers[k]);
+    if(O.finishing) for(const k in O.finishing) if(FINISHING[k]) Object.assign(FINISHING[k], O.finishing[k]);
+  }catch(e){}
+}
+
+/* ================= สูตรคำนวณ ================= */
+function imposition(plateKey, wcm, hcm){
+  const press = plateKey==='cut2' ? {w:74,h:53} : {w:65,h:48};
+  const pw=press.w-1.2, ph=press.h-0.7, fw=wcm+0.6, fh=hcm+0.6;
+  const nA=Math.floor(pw/fw)*Math.floor(ph/fh);
+  const nB=Math.floor(pw/fh)*Math.floor(ph/fw);
+  return { nUp:Math.max(nA,nB), press };
+}
+/* method: 'single' (หน้าเดียว) | 'wt' (กลับหน้าในตัว) | 'sheetwise' (กลับนอก แยกเพลท) */
+const METHOD_LABEL = { single:"พิมพ์หน้าเดียว", wt:"กลับหน้าในตัว (Work-and-Turn)", sheetwise:"กลับนอก (Sheetwise)" };
+function quote(plateKey, method, s){
+  const { nUp, press } = imposition(plateKey, s.wcm, s.hcm);
+  let sides, colorsPlate, printColors, finishedPerSheet;
+  if(method==='single'){ sides=1; colorsPlate=s.front; printColors=s.front; finishedPerSheet=nUp; }
+  else if(method==='wt'){ sides=2; colorsPlate=Math.max(s.front,s.back); printColors=colorsPlate; finishedPerSheet=Math.floor(nUp/2); }
+  else { sides=2; colorsPlate=s.front+s.back; printColors=s.front+s.back; finishedPerSheet=nUp; } // sheetwise
+  if(!isFinite(finishedPerSheet) || finishedPerSheet<=0 || colorsPlate<=0) return null;
+  const minSheets = Math.ceil(s.qty / finishedPerSheet);
+  const spoil = SPOIL_PER_SIDE * sides;                 // 300 ใบ/ด้าน
+  const sheets = minSheets + spoil;
+  const ink = s.matType==='sticker' ? s.ink : 'conventional';
+  const t = PRINT_COST[plateKey][ink];
+  const perColor = t.flat + (sheets>t.upTo ? (sheets-t.upTo)*t.over : 0);
+  const printCost = perColor * printColors;
+  const plateCost = PRINT_COST[plateKey].plate * colorsPlate;
+  let matCost;
+  if(s.matType==='sticker'){
+    matCost = s.ppc * (s.wcm*s.hcm) * (s.qty + spoil*finishedPerSheet);
+  } else {
+    const sheetAreaCm2 = press.w * press.h;             // พื้นที่ใบพิมพ์เต็มใบ
+    matCost = (sheetAreaCm2 * s.gsm / 1e7) * s.pricePerKg * PAPER_MARKUP * sheets;
+  }
+  let finCost = 0; const finList = [];
+  (s.finishing||[]).forEach(k=>{
+    const f = FINISHING[k]; if(!f) return;
+    let c = f.perPiece!==undefined ? f.perPiece*s.qty : f.perSheet*sheets;
+    c = Math.max(c, f.min||0);
+    finCost += c; finList.push({name:f.name, cost:c});
+  });
+  const total = plateCost + printCost + matCost + finCost;
+  return { plateKey, method, nUp, finishedPerSheet, sheets, spoil, colorsPlate, printColors, plateCost, printCost, matCost, finCost, finList, total };
+}
+/* เลือกเครื่อง (ตัด4/ตัด2) และวิธีพิมพ์ที่ถูกที่สุด */
+function bestQuote(s){
+  const cands = [];
+  for(const p of ['cut4','cut2']){
+    if(s.back>0){
+      cands.push(quote(p,'sheetwise',s));                                  // 2 ด้านทำได้เสมอ
+      if(s.front===s.back){ const q=quote(p,'wt',s); if(q&&q.finishedPerSheet>=1) cands.push(q); } // W&T เฉพาะสีหน้า=หลัง
+    } else {
+      cands.push(quote(p,'single',s));
+    }
+  }
+  return cands.filter(Boolean).reduce((b,q)=> (!b || q.total<b.total)?q:b, null);
+}
+
+/* ================= state + UI ================= */
+const ST = { step:1, qty:0 };
+const baht = n => "฿" + n.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const el = id => document.getElementById(id);
+
+/* สร้างสเปกจากฟอร์มปัจจุบัน (ยังไม่ใส่ qty) */
+function specBase(){
+  const cat = el('cat').value, cfg = CAT_CFG[cat];
+  const sizeKey = el('size').value;
+  let wcm, hcm;
+  if(sizeKey==='custom'){ wcm=+el('w').value; hcm=+el('h').value; }
+  else { wcm=PRESET_SIZES[sizeKey].w; hcm=PRESET_SIZES[sizeKey].h; }
+  const finishing = [...document.querySelectorAll('#finBox input:checked')].map(c=>c.value);
+  const s = { wcm, hcm, front:+el('front').value, back:+el('back').value, matType:cfg.mat, finishing };
+  if(cfg.mat==='sticker'){
+    const st = STICKERS[el('mat').value]; s.ppc=st.ppc; s.ink=st.ink;
+  } else {
+    const p = PAPERS[el('paper').value]; s.pricePerKg=p.pricePerKg; s.gsm=+el('gsm').value;
+  }
+  return s;
+}
+
+function renderStepbar(){
+  const labels=["หมวด/สเปก","จำนวน/ราคา","ข้อมูลผู้ติดต่อ","ใบเสนอราคา"];
+  el('stepbar').innerHTML = labels.map((l,i)=>{
+    const n=i+1, cls = ST.step===n?'active':(ST.step>n?'done':'');
+    return '<div class="s '+cls+'"><span class="n">'+n+'</span><span class="lb">'+l+'</span></div>'+
+      (n<4?'<span class="bar"></span>':'');
+  }).join('');
+}
+
+function onCat(){
+  const cfg = CAT_CFG[el('cat').value];
+  // material area
+  if(cfg.mat==='sticker'){
+    el('matLbl').innerHTML = 'วัสดุ <span class="req">*</span>';
+    el('matWrap').innerHTML = '<select id="mat">'+Object.entries(STICKERS).map(([k,v])=>
+      '<option value="'+k+'"'+(k===cfg.sticker?' selected':'')+'>'+v.name+'</option>').join('')+'</select>';
+  } else {
+    el('matLbl').innerHTML = 'กระดาษ <span class="req">*</span>';
+    el('matWrap').innerHTML =
+      '<div class="two"><select id="paper" onchange="fillGsm()">'+Object.entries(PAPERS).map(([k,v])=>
+        '<option value="'+k+'"'+(k===cfg.paper?' selected':'')+'>'+v.name+'</option>').join('')+'</select>'+
+      '<select id="gsm"></select></div>';
+    fillGsm(cfg.gsm);
+  }
+  // size
+  el('size').value = cfg.size; onSize();
+  if(cfg.mat==='sticker' && cfg.size==='custom'){ el('w').value=cfg.w; el('h').value=cfg.h; }
+}
+function fillGsm(pref){
+  const p = PAPERS[el('paper').value];
+  el('gsm').innerHTML = p.gsms.map(g=>'<option value="'+g+'"'+(g===pref?' selected':'')+'>'+g+' แกรม</option>').join('');
+}
+function onSize(){
+  el('customSize').style.display = el('size').value==='custom' ? 'grid' : 'none';
+}
+
+function renderQtyTable(){
+  const base = specBase();
+  el('qtyRows').innerHTML = QTY_PRESET.map(q=>{
+    const r = bestQuote({...base, qty:q});
+    if(!r) return '';
+    const m = r.plateKey==='cut2'?'ตัด 2':'ตัด 4';
+    return '<tr data-q="'+q+'" onclick="selectQty('+q+')" class="'+(ST.qty===q?'sel':'')+'">'+
+      '<td>'+q.toLocaleString()+'</td>'+
+      '<td><span class="tag-machine">'+m+'</span></td>'+
+      '<td>'+baht(r.total)+'</td>'+
+      '<td>'+baht(r.total/q)+'</td></tr>';
+  }).join('');
+}
+function selectQty(q){ ST.qty=q; el('toStep3').disabled=false; renderQtyTable(); }
+function useCustomQty(){
+  const q = +el('customQty').value;
+  if(q>0){ selectQty(q); }
+}
+
+function renderQuote(){
+  const s = {...specBase(), qty:ST.qty};
+  const r = bestQuote(s);
+  if(!r){ el('quoteArea').innerHTML='<div class="muted">คำนวณไม่ได้ — ตรวจขนาด/จำนวน</div>'; return; }
+  const cat = CAT_LABEL[el('cat').value];
+  const machine = r.plateKey==='cut2'?'ตัด 2 (SM74)':'ตัด 4 (MO)';
+  const sidesTxt = s.back>0 ? ('2 ด้าน · '+METHOD_LABEL[r.method]) : '1 ด้าน';
+  const matName = s.matType==='sticker' ? STICKERS[el('mat').value].name
+                : PAPERS[el('paper').value].name + ' ' + s.gsm + ' แกรม';
+  const finTxt = r.finList.length ? r.finList.map(f=>f.name).join(', ') : '-';
+  const pantone = el('pantone') && el('pantone').checked;
+  const rows = [
+    ['หมวดงาน', cat],
+    ['วัสดุ/กระดาษ', matName],
+    ['ขนาด', s.wcm+' × '+s.hcm+' ซม.'],
+    ['พิมพ์', sidesTxt+' · สีหน้า '+s.front+' / สีหลัง '+s.back + (pantone?' · มีสีพิเศษ (Pantone)':'')],
+    ['หลังพิมพ์', finTxt],
+    ['จำนวน', s.qty.toLocaleString()+' ชิ้น'],
+    ['เครื่องพิมพ์', machine+' · '+r.sheets.toLocaleString()+' ใบพิมพ์'],
+  ];
+  el('quoteArea').innerHTML =
+    '<div class="qbox"><table>'+rows.map(([k,v])=>'<tr><td class="muted">'+k+'</td><td style="text-align:right">'+v+'</td></tr>').join('')+'</table></div>'+
+    '<table style="margin-top:14px">'+
+    '<tr><td>ค่าเพลท</td><td>'+baht(r.plateCost)+'</td></tr>'+
+    '<tr><td>ค่าพิมพ์</td><td>'+baht(r.printCost)+'</td></tr>'+
+    '<tr><td>ค่ากระดาษ/วัสดุ</td><td>'+baht(r.matCost)+'</td></tr>'+
+    (r.finCost>0?'<tr><td>ค่าหลังพิมพ์</td><td>'+baht(r.finCost)+'</td></tr>':'')+
+    '</table>'+
+    '<div class="total"><span>ราคารวมโดยประมาณ</span><b>'+baht(r.total)+'</b></div>'+
+    '<div class="muted" style="text-align:right">≈ '+baht(r.total/s.qty)+' /ชิ้น (ยังไม่รวม VAT/ค่าจัดส่ง)</div>';
+  ST._lastQuoteText = quoteText(rows, r, s);
+}
+function quoteText(rows, r, s){
+  let t = "ใบเสนอราคา — Thai Print Inter Group\n";
+  const job=el('jobName').value; if(job) t+="งาน: "+job+"\n";
+  rows.forEach(([k,v])=>t+= k+": "+v+"\n");
+  t+="ค่าเพลท: "+baht(r.plateCost)+"\nค่าพิมพ์: "+baht(r.printCost)+"\nค่ากระดาษ/วัสดุ: "+baht(r.matCost)+"\n";
+  if(r.finCost>0) t+="ค่าหลังพิมพ์: "+baht(r.finCost)+"\n";
+  t+="รวมโดยประมาณ: "+baht(r.total)+" (≈ "+baht(r.total/s.qty)+"/ชิ้น)\n";
+  const nm=el('cName').value, ph=el('cPhone').value;
+  if(nm||ph) t+="ผู้ติดต่อ: "+nm+" "+ph+"\n";
+  return t;
+}
+function copyQuote(){
+  navigator.clipboard.writeText(ST._lastQuoteText||'').then(()=>alert('คัดลอกใบเสนอราคาแล้ว'));
+}
+function sendLine(){
+  copyQuote();
+  window.open('https://line.me/R/ti/p/'+encodeURIComponent(LINE_ID),'_blank');
+}
+
+/* นำทางระหว่างขั้น */
+function go(n){
+  if(n===2) renderQtyTable();
+  if(n===4){ if(!ST.qty){ alert('กรุณาเลือกจำนวนก่อน'); return; } renderQuote(); }
+  ST.step=n;
+  for(let i=1;i<=4;i++) el('p'+i).style.display = i===n?'block':'none';
+  renderStepbar();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* init (เฉพาะบนเบราว์เซอร์ — ข้ามตอนรันเทสต์ใน node) */
+if(typeof document!=='undefined') (function init(){
+  el('cat').innerHTML = Object.entries(CAT_LABEL).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('');
+  el('size').innerHTML = Object.entries(PRESET_SIZES).map(([k,v])=>'<option value="'+k+'">'+v.label+'</option>').join('');
+  el('finBox').innerHTML = Object.entries(FINISHING).map(([k,v])=>
+    '<label><input type="checkbox" value="'+k+'"> '+v.name+'</label>').join('');
+  // ?cat= preselect
+  const q = new URLSearchParams(location.search).get('cat');
+  if(q && CAT_LABEL[q]) el('cat').value = q;
+  onCat();
+  renderStepbar();
+})();
+
+/* export สำหรับเทสต์ node */
+if(typeof module!=='undefined' && module.exports){ module.exports = { quote, bestQuote, imposition, PRINT_COST, PAPERS, STICKERS, FINISHING, SPOIL_PER_SIDE }; }
+</script>
+</body>
+</html>

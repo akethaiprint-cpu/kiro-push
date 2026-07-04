@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>จัดการราคา (เจ้าหน้าที่) — Thai Print Inter Group</title>
+<style>
+  :root{--navy:#12284c;--navy2:#1c3a6e;--orange:#f7941d;--orange2:#e07c00;--teal:#12b3a6;--bg:#f4f6fb;--line:#e3e8f0;--ink:#1f2937;--muted:#6b7280}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px}
+  header{background:var(--navy);color:#fff;padding:14px 0}
+  header .wrap{display:flex;justify-content:space-between;align-items:center}
+  header .logo{font-weight:800;font-size:18px}
+  header .logo b{color:var(--orange)}
+  header a{color:#cdd7e8;text-decoration:none;font-size:14px}
+  .btn{border:none;border-radius:8px;padding:10px 18px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn-orange{background:var(--orange);color:#fff}.btn-teal{background:var(--teal);color:#fff}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(18,40,76,.08);padding:22px;margin:18px 0}
+  .card h3{color:var(--navy);margin-bottom:14px;font-size:18px;border-bottom:2px solid var(--line);padding-bottom:8px}
+  .row{display:grid;grid-template-columns:1fr 130px 130px;gap:10px;align-items:center;margin-bottom:8px}
+  .row .nm{font-size:14px}
+  .row.h{font-size:12px;color:var(--muted);font-weight:700}
+  input,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;font-family:inherit;font-size:14px;background:#fbfcfe}
+  input:focus,select:focus{outline:none;border-color:var(--navy2);background:#fff}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;position:sticky;top:0;background:var(--bg);padding:12px 0;z-index:5;border-bottom:1px solid var(--line)}
+  .note{background:#fff8ec;border:1px solid #ffe0b2;color:#8a5a00;padding:12px;border-radius:8px;font-size:14px;margin:14px 0}
+  /* login */
+  #gate{position:fixed;inset:0;background:var(--navy);display:grid;place-items:center;z-index:100}
+  #gate .box{background:#fff;border-radius:14px;padding:30px;width:320px;text-align:center}
+  #gate h2{color:var(--navy);margin-bottom:6px}
+  #gate p{color:var(--muted);font-size:14px;margin-bottom:16px}
+  #gate input{text-align:center;font-size:22px;letter-spacing:6px;margin-bottom:12px}
+  #gate .err{color:#c0392b;font-size:13px;height:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}.row{grid-template-columns:1fr 90px 90px}}
+</style>
+</head>
+<body>
+
+<!-- PIN gate -->
+<div id="gate">
+  <div class="box">
+    <h2>🔒 จัดการราคา</h2>
+    <p>สำหรับเจ้าหน้าที่ — กรอกรหัส PIN</p>
+    <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••" onkeydown="if(event.key==='Enter')checkPin()">
+    <div class="err" id="pinErr"></div>
+    <button class="btn btn-teal" style="width:100%" onclick="checkPin()">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<header>
+  <div class="wrap">
+    <div class="logo"><b>T</b>P Thai Print — จัดการราคา</div>
+    <a href="index.html">← กลับหน้าเว็บ</a>
+  </div>
+</header>
+
+<div class="wrap" id="app" style="display:none">
+  <div class="toolbar">
+    <button class="btn btn-orange" onclick="save()">💾 บันทึก (มีผลทันที)</button>
+    <button class="btn btn-ghost" onclick="doExport()">⬇️ Export JSON</button>
+    <label class="btn btn-ghost" style="margin:0">⬆️ Import JSON<input type="file" id="imp" accept="application/json" style="display:none" onchange="doImport(event)"></label>
+    <button class="btn btn-ghost" onclick="resetAll()">↺ คืนค่าเริ่มต้น</button>
+  </div>
+
+  <div class="note">
+    ราคาที่บันทึกจะเก็บใน localStorage (<code>tp_priceTable</code>) ของเบราว์เซอร์นี้ มีผลกับหน้า
+    <b>คำนวณด่วน</b> และ <b>Wizard</b> ทันที — <b>ข้อจำกัด:</b> เห็นเฉพาะบนเครื่อง/เบราว์เซอร์นี้
+    ถ้าต้องการให้ลูกค้าทุกคนเห็นราคาใหม่ ให้ Export JSON แล้วให้ทีมพัฒนา sync เข้าโค้ด (default)
+  </div>
+
+  <div id="editor"></div>
+
+  <div style="text-align:center;margin:24px 0">
+    <button class="btn btn-orange" onclick="save()">💾 บันทึกราคา</button>
+  </div>
+</div>
+
+<script>
+const PIN = "2569";  /* แก้รหัสที่นี่ */
+
+/* ===== DEFAULTS (ต้องตรงกับ default ใน index.html + estimate.html) ===== */
+const DEFAULTS = {
+  print:{
+    cut4:{ plate:300, conventional:{flat:900, upTo:10000, over:0.10}, uv:{flat:1500, upTo:1000,  over:1.00} },
+    cut2:{ plate:600, conventional:{flat:1200,upTo:10000, over:0.20}, uv:{flat:2000, upTo:10000, over:1.50} },
+  },
+  paperMarkup:1.20,
+  spoilPerSide:300,
+  papers:{
+    artGlossy:{name:"อาร์ตมัน", pricePerKg:32, gsms:[90,105,128,130,157]},
+    artMatte:{name:"อาร์ตด้าน", pricePerKg:32, gsms:[90,105,128,130,157]},
+    artCard:{name:"อาร์ตการ์ด 2 หน้า", pricePerKg:39, gsms:[190,210,230,260,300,350]},
+    ivory:{name:"อาร์ตการ์ด 1 หน้า (ไอวอรี่)", pricePerKg:32, gsms:[230,250,300,350]},
+    bond:{name:"กระดาษปอนด์", pricePerKg:30, gsms:[70,80,100,120]},
+    greyBack:{name:"กล่องแป้งหลังเทา", pricePerKg:23, gsms:[250,300,350,400]},
+  },
+  stickers:{
+    pvc:{name:"สติ๊กเกอร์ PVC (UV)", ppc:0.004, ink:"uv"},
+    pp:{name:"สติ๊กเกอร์ PP (UV)", ppc:0.004, ink:"uv"},
+    pet:{name:"สติ๊กเกอร์ PET (UV)", ppc:0.005, ink:"uv"},
+    art:{name:"สติ๊กเกอร์อาร์ต (คอนเวนชั่นนัล)", ppc:0.004, ink:"conventional"},
+    paper:{name:"สติ๊กเกอร์กระดาษ (คอนเวนชั่นนัล)", ppc:0.003, ink:"conventional"},
+  },
+  finishing:{
+    laminateGlossy:{name:"เคลือบเงา", perSheet:1.0, min:300},
+    laminateMatte:{name:"เคลือบด้าน", perSheet:1.0, min:300},
+    spotUV:{name:"Spot UV", perSheet:2.0, min:500},
+    fold:{name:"พับ", perPiece:0.10, min:200},
+    dieCut:{name:"ไดคัท", perPiece:0.30, min:500},
+    emboss:{name:"ปั๊มนูน", perPiece:0.50, min:500},
+    foilStamp:{name:"ปั๊มเคทอง/เงิน", perPiece:0.60, min:600},
+    numbering:{name:"รันนัมเบอร์", perPiece:0.15, min:200},
+    perforate:{name:"ปรุฉีก", perPiece:0.10, min:200},
+  },
+  vinyl:[[10,180,220],[Infinity,120,150]],
+  stpvc:[[10,150,190],[Infinity,110,150]],
+  flat:{ photo:{normal:250,rush:350}, canvas:{normal:400,rush:550}, fabric:{normal:300,rush:420} },
+};
+const FLAT_LABEL = { photo:"โฟโต้เปเปอร์", canvas:"ผ้าแคนวาส", fabric:"ผ้าป้าย/Backdrop" };
+
+let data = load();
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function load(){ const d=clone(DEFAULTS); try{ merge(d, JSON.parse(localStorage.getItem('tp_priceTable')||'{}')); }catch(e){} return d; }
+function merge(d,s){ for(const k in s){ if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])){ d[k]=d[k]||{}; merge(d[k],s[k]); } else d[k]=s[k]; } }
+
+/* ===== PIN ===== */
+function checkPin(){
+  if(document.getElementById('pin').value===PIN){
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app').style.display='block';
+    render();
+  } else { document.getElementById('pinErr').textContent='รหัสไม่ถูกต้อง'; }
+}
+
+/* ===== render ===== */
+const N = (path,val)=>'<input class="pf" data-t="num" data-path="'+path+'" type="number" step="any" value="'+val+'">';
+function render(){
+  let h='';
+  // markup
+  h+='<div class="card"><h3>กระดาษ (ต้นทุน บ./กก.) + Markup</h3>';
+  h+='<div class="row"><div class="nm">ตัวคูณกำไรกระดาษ (markup)</div>'+N('paperMarkup',data.paperMarkup)+'<div></div></div>';
+  h+='<div class="row h"><div>ชนิดกระดาษ</div><div>บ./กก.</div><div></div></div>';
+  for(const k in data.papers) h+='<div class="row"><div class="nm">'+data.papers[k].name+'</div>'+N('papers.'+k+'.pricePerKg',data.papers[k].pricePerKg)+'<div></div></div>';
+  h+='</div>';
+
+  // print rates
+  h+='<div class="card"><h3>เรตค่าพิมพ์ + ค่าเพลท + เผื่อเสีย</h3>';
+  h+='<div class="row"><div class="nm">เผื่อเสียตั้งเครื่อง (ใบพิมพ์/ด้าน)</div>'+N('spoilPerSide',data.spoilPerSide)+'<div></div></div>';
+  h+='<div class="grid2">';
+  for(const p of ['cut4','cut2']){
+    const P=data.print[p]; const nm=p==='cut4'?'ตัด 4 (MO 65×48)':'ตัด 2 (SM74 74×53)';
+    h+='<div><b style="color:var(--navy)">'+nm+'</b>';
+    h+='<div class="row"><div class="nm">ค่าเพลท/สี</div>'+N('print.'+p+'.plate',P.plate)+'<div></div></div>';
+    for(const ink of ['conventional','uv']){
+      const L=ink==='uv'?'UV':'คอนเวนชั่นนัล'; const t=P[ink];
+      h+='<div class="row h"><div>'+L+'</div><div>เหมา/สี</div><div>เกิน/ใบ</div></div>';
+      h+='<div class="row"><div class="nm">≤ '+ (t.upTo===null?'∞':t.upTo.toLocaleString()) +' ใบ</div>'+N('print.'+p+'.'+ink+'.flat',t.flat)+N('print.'+p+'.'+ink+'.over',t.over)+'</div>';
+      h+='<div class="row"><div class="nm" style="font-size:12px;color:var(--muted)">ช่วงเหมา (ใบ)</div>'+N('print.'+p+'.'+ink+'.upTo',t.upTo)+'<div></div></div>';
+    }
+    h+='</div>';
+  }
+  h+='</div></div>';
+
+  // stickers
+  h+='<div class="card"><h3>วัสดุสติ๊กเกอร์ (Offset)</h3><div class="row h"><div>วัสดุ</div><div>บ./ตร.ซม.</div><div>หมึก</div></div>';
+  for(const k in data.stickers){ const s=data.stickers[k];
+    h+='<div class="row"><div class="nm">'+s.name+'</div>'+N('stickers.'+k+'.ppc',s.ppc)+
+       '<select class="pf" data-t="str" data-path="stickers.'+k+'.ink"><option value="conventional"'+(s.ink==='conventional'?' selected':'')+'>คอนเวนชั่นนัล</option><option value="uv"'+(s.ink==='uv'?' selected':'')+'>UV</option></select></div>';
+  }
+  h+='</div>';
+
+  // finishing
+  h+='<div class="card"><h3>ราคาหลังพิมพ์ <span style="font-size:12px;color:var(--muted)">(ยืนยันกับโรงงาน)</span></h3><div class="row h"><div>รายการ</div><div>ราคา</div><div>ขั้นต่ำ (บ.)</div></div>';
+  for(const k in data.finishing){ const f=data.finishing[k];
+    const isPiece = f.perPiece!==undefined;
+    const unit = isPiece?'บ./ชิ้น':'บ./ใบพิมพ์';
+    const path = isPiece?'finishing.'+k+'.perPiece':'finishing.'+k+'.perSheet';
+    const val = isPiece?f.perPiece:f.perSheet;
+    h+='<div class="row"><div class="nm">'+f.name+' <span style="font-size:11px;color:var(--muted)">('+unit+')</span></div>'+N(path,val)+N('finishing.'+k+'.min',f.min)+'</div>';
+  }
+  h+='</div>';
+
+  // inkjet
+  h+='<div class="card"><h3>อิงค์เจ็ท — เรตราคา (บ./ตร.ม.)</h3>';
+  for(const key of ['vinyl','stpvc']){
+    h+='<b style="color:var(--navy)">'+(key==='vinyl'?'ไวนิล':'สติ๊กเกอร์ PVC ใหญ่')+'</b><div class="row h"><div>ช่วงพื้นที่ (ตร.ม.)</div><div>720 dpi</div><div>1440 dpi</div></div>';
+    data[key].forEach((t,i)=>{
+      const rangeLabel = t[0]===null||t[0]===Infinity||!isFinite(t[0]) ? 'มากกว่านั้น' : '≤ '+t[0];
+      h+='<div class="row"><div class="nm">'+rangeLabel+'</div>'+N(key+'.'+i+'.1',t[1])+N(key+'.'+i+'.2',t[2])+'</div>';
+    });
+  }
+  h+='<div class="row h" style="margin-top:10px"><div>วัสดุอื่น</div><div>ปกติ</div><div>ด่วน</div></div>';
+  for(const k in data.flat){ const f=data.flat[k];
+    h+='<div class="row"><div class="nm">'+(FLAT_LABEL[k]||k)+'</div>'+N('flat.'+k+'.normal',f.normal)+N('flat.'+k+'.rush',f.rush)+'</div>';
+  }
+  h+='</div>';
+
+  document.getElementById('editor').innerHTML = h;
+}
+
+/* ===== save / export / import ===== */
+function setPath(o,path,val){ const ks=path.split('.'); let c=o; for(let i=0;i<ks.length-1;i++) c=c[ks[i]]; c[ks[ks.length-1]]=val; }
+function collect(){
+  const out=clone(data);
+  document.querySelectorAll('.pf').forEach(inp=>{
+    let v=inp.value; if(inp.dataset.t==='num') v = v===''?0:Number(v);
+    setPath(out, inp.dataset.path, v);
+  });
+  return out;
+}
+function save(){
+  data = collect();
+  localStorage.setItem('tp_priceTable', JSON.stringify(data));
+  alert('บันทึกราคาแล้ว ✅ มีผลทันที — เปิด/รีเฟรชหน้าคำนวณด่วนหรือ Wizard เพื่อดูราคาใหม่');
+}
+function doExport(){
+  const blob=new Blob([JSON.stringify(collect(),null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='tp_priceTable.json'; a.click();
+}
+function doImport(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const o=JSON.parse(r.result); data=clone(DEFAULTS); merge(data,o); render(); alert('นำเข้าราคาแล้ว — กด “บันทึก” เพื่อใช้งาน'); }catch(err){ alert('ไฟล์ JSON ไม่ถูกต้อง'); } };
+  r.readAsText(f);
+}
+function resetAll(){
+  if(!confirm('คืนค่าราคาเป็นค่าเริ่มต้นทั้งหมด?')) return;
+  localStorage.removeItem('tp_priceTable'); data=clone(DEFAULTS); render();
+  alert('คืนค่าเริ่มต้นแล้ว (ยังไม่บันทึก — กด “บันทึก” หากต้องการล้างค่าที่เคยเซฟ)');
+}
+</script>
+</body>
+</html>
