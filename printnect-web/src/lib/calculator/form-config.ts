@@ -56,6 +56,26 @@ export interface Option {
   label: string;
 }
 
+/** ขนาดสำเร็จรูป (ซม.) — เลือกจาก dropdown หรือกำหนดเอง */
+export interface PresetSize {
+  key: string;
+  label: string;
+  width: number;
+  height: number;
+}
+
+export const PRESET_SIZES: PresetSize[] = [
+  { key: "A3", label: "A3 (29.7 × 42 ซม.)", width: 29.7, height: 42 },
+  { key: "A4", label: "A4 (21 × 29.7 ซม.)", width: 21, height: 29.7 },
+  { key: "A5", label: "A5 (14.8 × 21 ซม.)", width: 14.8, height: 21 },
+  { key: "A6", label: "A6 (10.5 × 14.8 ซม.)", width: 10.5, height: 14.8 },
+  { key: "B4", label: "B4 (25 × 35.3 ซม.)", width: 25, height: 35.3 },
+  { key: "B5", label: "B5 (17.6 × 25 ซม.)", width: 17.6, height: 25 },
+  { key: "namecard", label: "นามบัตร (9 × 5.4 ซม.)", width: 9, height: 5.4 },
+  { key: "postcard", label: "โปสการ์ด (10 × 15 ซม.)", width: 10, height: 15 },
+  { key: "custom", label: "กำหนดขนาดเอง", width: 0, height: 0 },
+];
+
 export interface FieldSpec {
   isInkjet: boolean;
   needsColorCount: boolean;
@@ -115,11 +135,14 @@ export function buildFieldSpec(
 
 /** ค่าที่ผู้ใช้กรอกในฟอร์ม (string จาก input) */
 export interface FormValues {
+  sizePreset: string; // key ของ PRESET_SIZES ("custom" = กรอกเอง)
   width: string;
   height: string;
   depth: string;
   quantity: string;
   colorCount: string;
+  frontColors: string; // สีด้านหน้า
+  backColors: string; // สีด้านหลัง
   material: string;
   media: string;
   resolution: string;
@@ -150,7 +173,15 @@ export function buildSpecs(
   } else {
     specs.material = v.material;
   }
-  if (fields.needsColorCount) specs.colorCount = Number(v.colorCount);
+  if (fields.needsColorCount) {
+    // รวมสีหน้า+หลังเป็น colorCount เดียว (โมเดล perSideCombined ของระบบ Offset/สกรีน)
+    const front = Number(v.frontColors) || Number(v.colorCount) || 0;
+    const back = Number(v.backColors) || 0;
+    const total = front + back;
+    specs.colorCount = total > 0 ? total : 1;
+    specs.frontColors = front;
+    specs.backColors = back;
+  }
   if (fields.needsInkOptions) {
     if (v.inkType === "uv" || v.inkType === "conventional") specs.inkType = v.inkType;
     if (v.plateClass) specs.plateClass = v.plateClass;

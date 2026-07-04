@@ -1,5 +1,5 @@
 import Link from "next/link";
-import CalculatorForm from "@/components/calculator/CalculatorForm";
+import CalculatorWizard from "@/components/calculator/CalculatorWizard";
 import { getActivePriceTable } from "@/lib/price-table/repository";
 import { getDefaultPriceTable } from "@/lib/price-table/default-price-table";
 import type { PriceTable } from "@/domain/pricing/types";
@@ -27,7 +27,7 @@ export default async function CalculatorPage() {
           ← หน้าแรก
         </Link>
       </header>
-      <CalculatorForm priceTable={priceTable} />
+      <CalculatorWizard priceTable={priceTable} />
     </main>
   );
 }
