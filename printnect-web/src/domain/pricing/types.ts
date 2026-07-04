@@ -1,5 +1,5 @@
 /**
- * Domain types สำหรับ Pricing_Engine (PrintNect)
+ * Domain types สำหรับ Pricing_Engine (ThaiPrintNect)
  * ใช้ type ตรงกับโครงข้อมูลใน js/pricing-engine.js เดิม
  */
 

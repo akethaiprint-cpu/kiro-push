@@ -4,7 +4,7 @@
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export const SESSION_COOKIE = "printnect_session";
+export const SESSION_COOKIE = "thaiprintnect_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 วัน (วินาที)
 
 function secret(): string {

@@ -1,6 +1,6 @@
-# การ Deploy PrintNect
+# การ Deploy ThaiPrintNect
 
-PrintNect เป็นแอป **Next.js** ที่มี server (API + Prisma + DB) จึง **รันบน GitHub Pages ไม่ได้**
+ThaiPrintNect เป็นแอป **Next.js** ที่มี server (API + Prisma + DB) จึง **รันบน GitHub Pages ไม่ได้**
 ต้อง deploy บนแพลตฟอร์มที่รัน Node/Next ได้ เช่น **Vercel** (แนะนำ ง่ายสุด) หรือ **Cloudflare**
 
 > โค้ดอยู่ในโฟลเดอร์ย่อย `printnect-web/` ของ repo — ตอน import ต้องตั้ง **Root Directory = `printnect-web`**
@@ -45,7 +45,9 @@ datasource db {
 | ชื่อ | ค่า |
 |---|---|
 | `DATABASE_URL` | connection string จาก Neon |
-| `ADMIN_API_TOKEN` | ตั้งรหัสลับที่เดายาก (ใช้ยืนยันตอนบันทึกราคาในหน้า admin) |
+| `ADMIN_API_TOKEN` | รหัสลับเดายาก — ใช้เป็นรหัส login หน้า `/admin` (และ Bearer token ของ API) |
+| `ADMIN_PASSWORD` | (ตัวเลือก) รหัส login หน้า `/admin` แยกต่างหาก ถ้าไม่ตั้งจะใช้ `ADMIN_API_TOKEN` |
+| `SESSION_SECRET` | (ตัวเลือก) กุญแจเซ็น session cookie ถ้าไม่ตั้งจะใช้ `ADMIN_API_TOKEN` |
 
 ### 5. Deploy
 กด **Deploy** — เมื่อเสร็จจะได้ URL เช่น `https://printnect-xxxx.vercel.app`

@@ -5,7 +5,7 @@
  */
 import type { CalculationResult, Specs } from "@/domain/pricing/types";
 
-export const QUOTE_STORAGE_KEY = "printnect:lastQuote";
+export const QUOTE_STORAGE_KEY = "thaiprintnect:lastQuote";
 
 export interface StoredQuote {
   system: string;

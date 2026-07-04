@@ -3,7 +3,7 @@
 # การเปิดใช้: คัดลอกไฟล์นี้ไปที่ repo-root `.github/workflows/printnect-ci.yml`
 #   - ผ่านหน้าเว็บ GitHub (Add file → Create new file) ไม่ต้องใช้ scope พิเศษ, หรือ
 #   - push ด้วย token ที่มี scope `workflow` (classic) เพิ่ม
-name: PrintNect CI
+name: ThaiPrintNect CI
 
 # รันเฉพาะเมื่อไฟล์ใน printnect-web/ เปลี่ยน (ไม่กระทบเว็บเดิมที่ root)
 on:

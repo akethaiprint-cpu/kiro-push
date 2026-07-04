@@ -37,7 +37,7 @@ export default function LoginPage() {
   return (
     <main className="mx-auto max-w-sm px-6 py-20">
       <h1 className="mb-1 text-2xl font-bold">เข้าสู่ระบบผู้ดูแล</h1>
-      <p className="mb-6 text-sm text-gray-500">สำหรับจัดการราคา PrintNect</p>
+      <p className="mb-6 text-sm text-gray-500">สำหรับจัดการราคา ThaiPrintNect</p>
 
       <form onSubmit={onSubmit} className="space-y-4">
         <div>

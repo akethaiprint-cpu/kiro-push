@@ -1,4 +1,4 @@
-// Prisma schema สำหรับ PrintNect
+// Prisma schema สำหรับ ThaiPrintNect
 // datasource: SQLite สำหรับ dev/CI (ไม่ต้องตั้ง server)
 
 generator client {

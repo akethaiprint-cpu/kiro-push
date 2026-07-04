@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PrintNect — คำนวณราคางานพิมพ์",
+  title: "ThaiPrintNect — คำนวณราคางานพิมพ์",
   description: "ระบบคำนวณราคาสิ่งพิมพ์ ไทยพริ้นท์ อินเตอร์กรุ๊ป",
 };
 

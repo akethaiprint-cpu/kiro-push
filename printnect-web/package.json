@@ -1,8 +1,8 @@
 {
-  "name": "printnect-web",
+  "name": "thaiprintnect-web",
   "version": "0.1.0",
   "private": true,
-  "description": "PrintNect — เว็บคำนวณราคางานพิมพ์ ไทยพริ้นท์ อินเตอร์กรุ๊ป (Next.js rebuild)",
+  "description": "ThaiPrintNect — เว็บคำนวณราคางานพิมพ์ ไทยพริ้นท์ อินเตอร์กรุ๊ป (Next.js rebuild)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

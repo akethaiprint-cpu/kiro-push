@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function Home() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="text-3xl font-bold">PrintNect</h1>
+      <h1 className="text-3xl font-bold">ThaiPrintNect</h1>
       <p className="mt-3 text-gray-600">
         ระบบคำนวณราคางานพิมพ์ ไทยพริ้นท์ อินเตอร์กรุ๊ป (เวอร์ชัน Next.js)
       </p>
