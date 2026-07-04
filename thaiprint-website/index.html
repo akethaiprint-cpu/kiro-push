@@ -221,7 +221,7 @@
         <div class="row2">
           <div class="field">
             <label>วัสดุ <span class="req">*</span></label>
-            <select id="iMat">
+            <select id="iMat" onchange="onInkjetMedia()">
               <option value="vinyl">ไวนิล (Backlit/Frontlit)</option>
               <option value="stpvc">สติ๊กเกอร์ PVC ขนาดใหญ่</option>
               <option value="photo">โฟโต้เปเปอร์</option>
@@ -454,6 +454,15 @@ function runOffset(){
     '<div class="hint" style="text-align:right">≈ '+baht(unit)+' /ชิ้น</div>';
 }
 
+/* ความละเอียดที่แต่ละวัสดุอิงค์เจ็ทรองรับ */
+const DPI_BY_MEDIA = { vinyl:["720","1440"], stpvc:["720","1440"], photo:["1440"], canvas:["720","1440"], fabric:["1440"] };
+const DPI_LABEL = { "720":"720 dpi (มาตรฐาน)", "1440":"1440 dpi (คมชัดสูง)" };
+function onInkjetMedia(){
+  const m = document.getElementById('iMat').value;
+  const opts = DPI_BY_MEDIA[m] || ["720","1440"];
+  document.getElementById('iDpi').innerHTML = opts.map(d=>'<option value="'+d+'">'+DPI_LABEL[d]+'</option>').join('');
+}
+
 function runInkjet(){
   const r = calcInkjet({
     media:document.getElementById('iMat').value, dpi:document.getElementById('iDpi').value,
@@ -476,6 +485,7 @@ function runInkjet(){
 if(typeof document!=='undefined'){
   document.getElementById('oMat').innerHTML = Object.entries(STICKERS).map(([k,v])=>
     '<option value="'+k+'" data-ppc="'+v.ppc+'" data-ink="'+v.ink+'">'+v.name+'</option>').join('');
+  onInkjetMedia(); // ตั้งความละเอียดเริ่มต้นตามวัสดุอิงค์เจ็ท
 
   document.getElementById('promoGrid').innerHTML = PROMOS.map(p=>
     '<div class="promo">'+(p.tag?'<span class="tag">'+p.tag+'</span>':'')+
