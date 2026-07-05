@@ -126,11 +126,35 @@ const DEFAULTS = {
     numbering:{name:"รันนัมเบอร์", perPiece:0.15, min:200},
     perforate:{name:"ปรุฉีก", perPiece:0.10, min:200},
   },
-  vinyl:[[10,180,220],[Infinity,120,150]],
-  stpvc:[[10,150,190],[Infinity,110,150]],
-  flat:{ photo:{normal:250,rush:350}, canvas:{normal:400,rush:550}, fabric:{normal:300,rush:420} },
+  // วัสดุอิงค์เจ็ท — รีจิสทรีเดียว (ต้องตรงกับ INKJET ใน index.html)
+  // mode: volume=เรตลดตามพื้นที่ (tier/dpi), flat=คงที่ ปกติ/ด่วน, quote=สอบถามราคา
+  inkjet:{
+    vinyl:        { name:"ไวนิล Frontlit (ทึบแสง)",        cat:"ไวนิล / แบนเนอร์", mode:"volume", dpis:["720","1440"], ink:"Solvent/Eco-Solvent/Latex", rush:true, tiers:[[10,{"720":180,"1440":220}],[null,{"720":120,"1440":150}]] },
+    vinylBacklit: { name:"ไวนิล Backlit (โปร่งแสง)",       cat:"ไวนิล / แบนเนอร์", mode:"quote",  dpis:["1440"],       ink:"Solvent/Eco-Solvent" },
+    vinylBlockout:{ name:"ไวนิล Blockout (กันแสงทะลุ)",    cat:"ไวนิล / แบนเนอร์", mode:"quote",  dpis:["720","1440"], ink:"Solvent/Eco-Solvent" },
+    stpvc:        { name:"สติ๊กเกอร์ PVC ขาว (Outdoor)",   cat:"สติ๊กเกอร์",       mode:"volume", dpis:["720","1440"], ink:"Eco-Solvent/Latex/UV", rush:true, tiers:[[10,{"720":150,"1440":190}],[null,{"720":110,"1440":150}]] },
+    stClear:      { name:"สติ๊กเกอร์ PVC ใส (Clear)",       cat:"สติ๊กเกอร์",       mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/UV" },
+    stSeethrough: { name:"สติ๊กเกอร์ Seethrough (One-Way Vision)", cat:"สติ๊กเกอร์", mode:"quote", dpis:["1440"],       ink:"Eco-Solvent/UV" },
+    st3m:         { name:"สติ๊กเกอร์ 3M (พรีเมียม/ถอดได้)", cat:"สติ๊กเกอร์",       mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/Latex" },
+    stBacklit:    { name:"สติ๊กเกอร์ Backlit (ป้ายไฟ)",    cat:"สติ๊กเกอร์",       mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/UV" },
+    ppSticker:    { name:"PP Sticker (สังเคราะห์)",         cat:"สติ๊กเกอร์",       mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/Latex" },
+    photo:        { name:"โฟโต้เปเปอร์ (Glossy Photo)",     cat:"กระดาษ",           mode:"flat",   dpis:["1440"],       ink:"Dye/Pigment", flat:{normal:250,rush:350} },
+    ppPaper:      { name:"PP Paper (เคลือบ กันน้ำ)",        cat:"กระดาษ",           mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/Latex" },
+    fineArt:      { name:"Matte / Satin / Fine Art Paper",  cat:"กระดาษ",           mode:"quote",  dpis:["1440","2880"],ink:"Pigment" },
+    blueBack:     { name:"Blue Back Paper (หลังน้ำเงิน)",   cat:"กระดาษ",           mode:"quote",  dpis:["720"],        ink:"Solvent" },
+    filmBacklit:  { name:"Film Backlit (ฟิล์มป้ายไฟ)",     cat:"ฟิล์ม",            mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/UV" },
+    filmSpecial:  { name:"Clear / Reflective / Floor Film", cat:"ฟิล์ม",            mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/UV" },
+    fabric:       { name:"ผ้า IT / ผ้าไวนิล (Backdrop)",   cat:"ผ้า / แคนวาส",     mode:"flat",   dpis:["1440"],       ink:"Dye-Sub/Eco-Solvent", flat:{normal:300,rush:420} },
+    fabricMesh:   { name:"ผ้า Tension / Mesh",             cat:"ผ้า / แคนวาส",     mode:"quote",  dpis:["720","1440"], ink:"Dye-Sub/Eco-Solvent" },
+    dyeSub:       { name:"Dye-Sub Fabric (ซับลิเมชัน)",    cat:"ผ้า / แคนวาส",     mode:"quote",  dpis:["720","1440"], ink:"Dye-Sublimation" },
+    canvas:       { name:"ผ้าแคนวาส (Canvas)",             cat:"ผ้า / แคนวาส",     mode:"flat",   dpis:["720","1440"], ink:"Pigment/Latex", flat:{normal:400,rush:550} },
+    wallpaper:    { name:"Wallpaper (วอลเปเปอร์)",         cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["1440"],       ink:"Latex/Eco-Solvent" },
+    magnetic:     { name:"Magnetic (แม่เหล็ก)",            cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/UV" },
+    tarpaulin:    { name:"Tarpaulin (ผ้าใบกันน้ำ)",        cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["720"],        ink:"Solvent" },
+    rigid:        { name:"Rigid Board (พิมพ์ UV ตรง)",     cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["1440"],       ink:"UV Flatbed" },
+    bannerMesh:   { name:"Banner Mesh (ตาข่ายโฆษณา)",      cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["720"],        ink:"Solvent/Eco-Solvent" },
+  },
 };
-const FLAT_LABEL = { photo:"โฟโต้เปเปอร์", canvas:"ผ้าแคนวาส", fabric:"ผ้าป้าย/Backdrop" };
 
 let data = load();
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
@@ -151,6 +175,9 @@ const esc = v => String(v).replace(/"/g,'&quot;');
 const N = (path,val)=>'<input class="pf" data-t="num" data-path="'+path+'" type="number" step="any" value="'+val+'">';
 const T = (path,val)=>'<input class="pf" data-t="str" data-path="'+path+'" value="'+esc(val)+'">';
 const CSV = (path,arr)=>'<input class="pf" data-t="csv" data-path="'+path+'" value="'+(arr||[]).join(',')+'">';
+const DPICSV = (path,arr)=>'<input class="pf" data-t="dpicsv" data-path="'+path+'" value="'+(arr||[]).join(',')+'" placeholder="720,1440">';
+const MAXN = (path,val)=>'<input class="pf" data-t="maxnum" data-path="'+path+'" type="text" value="'+(val==null||!isFinite(val)?'∞':val)+'">';
+function modeSel(p,v){ return '<select class="pf" data-t="str" data-path="'+p+'" onchange="onModeChange(this)"><option value="volume"'+(v==='volume'?' selected':'')+'>ลดตามพื้นที่ (volume)</option><option value="flat"'+(v==='flat'?' selected':'')+'>คงที่ ปกติ/ด่วน (flat)</option><option value="quote"'+(v==='quote'?' selected':'')+'>สอบถามราคา (quote)</option></select>'; }
 function inkSel(p,v){ return '<select class="pf" data-t="str" data-path="'+p+'"><option value="conventional"'+(v==='conventional'?' selected':'')+'>คอนเวนชั่นนัล</option><option value="uv"'+(v==='uv'?' selected':'')+'>UV</option></select>'; }
 function unitSel(p,v){ return '<select class="pf" data-t="str" data-path="'+p+'"><option value="perPiece"'+(v==='perPiece'?' selected':'')+'>บ./ชิ้น</option><option value="perSheet"'+(v==='perSheet'?' selected':'')+'>บ./ใบพิมพ์</option></select>'; }
 const delBtn = (cat,k)=>'<button class="delx" onclick="delItem(\''+cat+'\',\''+k+'\')" title="ลบรายการ">🗑️</button>';
@@ -163,6 +190,20 @@ function addItem(cat){
   if(cat==='papers')   data.papers[key]   = { name:'กระดาษใหม่', pricePerKg:30, gsms:[128] };
   if(cat==='stickers') data.stickers[key] = { name:'วัสดุใหม่', ppc:0.004, ink:'uv' };
   if(cat==='finishing')data.finishing[key]= { name:'งานหลังพิมพ์ใหม่', perPiece:0.10, min:200 };
+  if(cat==='inkjet')   data.inkjet[key]   = { name:'วัสดุอิงค์เจ็ทใหม่', cat:'อื่นๆ', mode:'flat', dpis:['720','1440'], ink:'', flat:{normal:0,rush:0} };
+  render();
+}
+/* เปลี่ยนโหมดราคาอิงค์เจ็ท → เตรียมโครงสร้างราคาให้ตรงโหมด แล้ว render ใหม่ */
+function onModeChange(sel){
+  data = collect();
+  const k = sel.dataset.path.split('.')[1];
+  const m = data.inkjet[k]; if(!m) return;
+  if(m.mode==='flat' && !m.flat) m.flat = { normal:0, rush:0 };
+  if(m.mode==='volume' && (!Array.isArray(m.tiers) || !m.tiers.length)){
+    const dpis = (m.dpis&&m.dpis.length)?m.dpis:['720','1440'];
+    const zero = ()=>{ const o={}; dpis.forEach(d=>o[d]=0); return o; };
+    m.tiers = [[10, zero()], [null, zero()]];
+  }
   render();
 }
 function delItem(cat,k){
@@ -217,19 +258,41 @@ function render(){
   h+='<button class="btn btn-ghost addbtn" onclick="addItem(\'finishing\')">+ เพิ่มงานหลังพิมพ์</button>';
   h+='</div>';
 
-  // inkjet
-  h+='<div class="card"><h3>อิงค์เจ็ท — เรตราคา (บ./ตร.ม.)</h3>';
-  for(const key of ['vinyl','stpvc']){
-    h+='<b style="color:var(--navy)">'+(key==='vinyl'?'ไวนิล':'สติ๊กเกอร์ PVC ใหญ่')+'</b><div class="row h"><div>ช่วงพื้นที่ (ตร.ม.)</div><div>720 dpi</div><div>1440 dpi</div></div>';
-    data[key].forEach((t,i)=>{
-      const rangeLabel = t[0]===null||t[0]===Infinity||!isFinite(t[0]) ? 'มากกว่านั้น' : '≤ '+t[0];
-      h+='<div class="row"><div class="nm">'+rangeLabel+'</div>'+N(key+'.'+i+'.1',t[1])+N(key+'.'+i+'.2',t[2])+'</div>';
-    });
+  // inkjet (เพิ่ม/ลบได้ + เลือกโหมดราคา + ความละเอียด + เครื่อง)
+  h+='<div class="card"><h3>อิงค์เจ็ท — วัสดุ &amp; เรตราคา (บ./ตร.ม.)</h3>';
+  h+='<div class="note" style="margin-top:0">โหมดราคา: <b>volume</b> = ลดตามพื้นที่ (แยกเรตต่อ dpi), <b>flat</b> = คงที่ ปกติ/ด่วน, <b>quote</b> = สอบถามราคา (ไม่คิดอัตโนมัติ)</div>';
+  for(const k in (data.inkjet||{})){ const m=data.inkjet[k];
+    h+='<div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#fbfcfe">';
+    h+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
+      +'<div style="flex:1">'+T('inkjet.'+k+'.name',m.name)+'</div>'
+      +'<div style="width:190px">'+modeSel('inkjet.'+k+'.mode',m.mode||'quote')+'</div>'
+      +delBtn('inkjet',k)+'</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div class="colh">หมวด</div>'+T('inkjet.'+k+'.cat',m.cat||'')+'</div>'
+      +'<div><div class="colh">ความละเอียด (dpi, คั่นด้วย ,)</div>'+DPICSV('inkjet.'+k+'.dpis',m.dpis)+'</div>'
+      +'<div><div class="colh">หมึก/เครื่อง</div>'+T('inkjet.'+k+'.ink',m.ink||'')+'</div>'
+      +'</div>';
+    if(m.mode==='quote'){
+      h+='<div class="colh" style="color:#8a5a00">— โหมดสอบถามราคา: เครื่องคำนวณจะแสดง “สอบถามราคากับฝ่ายขาย” —</div>';
+    } else if(m.mode==='flat'){
+      const f=m.flat||{normal:0,rush:0};
+      h+='<div style="display:grid;grid-template-columns:1fr 120px 120px;gap:8px;align-items:end"><div class="nm">เรตคงที่ (บ./ตร.ม.)</div>'
+        +'<div><div class="colh">ปกติ</div>'+N('inkjet.'+k+'.flat.normal',f.normal!=null?f.normal:0)+'</div>'
+        +'<div><div class="colh">ด่วน</div>'+N('inkjet.'+k+'.flat.rush',f.rush!=null?f.rush:0)+'</div></div>';
+    } else { // volume
+      const dpis=(m.dpis&&m.dpis.length)?m.dpis:['720','1440'];
+      const tiers=Array.isArray(m.tiers)?m.tiers:[];
+      const gt='grid-template-columns:130px repeat('+dpis.length+',1fr);';
+      h+='<div class="colh" style="display:grid;'+gt+'gap:8px"><div>พื้นที่ ≤ (ตร.ม.)</div>'+dpis.map(d=>'<div>'+d+' dpi</div>').join('')+'</div>';
+      tiers.forEach((t,i)=>{ const rates=t[1]||{};
+        h+='<div style="display:grid;'+gt+'gap:8px;margin-bottom:6px">'+MAXN('inkjet.'+k+'.tiers.'+i+'.0',t[0])
+          +dpis.map(d=>N('inkjet.'+k+'.tiers.'+i+'.1.'+d, rates[d]!=null?rates[d]:0)).join('')+'</div>';
+      });
+      h+='<div class="colh">แถวสุดท้ายใส่ “∞” = พื้นที่มากกว่าช่วงก่อนหน้า · งานด่วนบวกอัตโนมัติสำหรับงานเล็ก 1–49 ตร.ม.</div>';
+    }
+    h+='</div>';
   }
-  h+='<div class="row h" style="margin-top:10px"><div>วัสดุอื่น</div><div>ปกติ</div><div>ด่วน</div></div>';
-  for(const k in data.flat){ const f=data.flat[k];
-    h+='<div class="row"><div class="nm">'+(FLAT_LABEL[k]||k)+'</div>'+N('flat.'+k+'.normal',f.normal)+N('flat.'+k+'.rush',f.rush)+'</div>';
-  }
+  h+='<button class="btn btn-ghost addbtn" onclick="addItem(\'inkjet\')">+ เพิ่มวัสดุอิงค์เจ็ท</button>';
   h+='</div>';
 
   document.getElementById('editor').innerHTML = h;
@@ -243,6 +306,8 @@ function collect(){
     let v=inp.value;
     if(inp.dataset.t==='num') v = v===''?0:Number(v);
     else if(inp.dataset.t==='csv') v = v.split(',').map(x=>Number(x.trim())).filter(n=>isFinite(n));
+    else if(inp.dataset.t==='dpicsv') v = v.split(',').map(x=>x.trim()).filter(Boolean);
+    else if(inp.dataset.t==='maxnum'){ const s=String(v).trim().toLowerCase(); v = (s===''||s==='∞'||s==='inf'||s==='infinity')?null:Number(s); }
     setPath(out, inp.dataset.path, v);
   });
   // แปลงหน่วยหลังพิมพ์กลับเป็น perPiece/perSheet
