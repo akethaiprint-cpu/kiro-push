@@ -164,6 +164,8 @@
           <select id="dSides"><option value="1">หน้าเดียว</option><option value="2">สองหน้า</option></select>
           <div class="lbl">หมึกพิเศษ (สถานี)</div>
           <input id="dSpecial" type="number" value="0" min="0" max="4">
+          <div class="lbl">หลังพิมพ์</div>
+          <div class="fin-box" id="finBoxDigital"></div>
         </div>
         <p class="muted" style="margin-top:8px">Fujifilm Revoria SC180 · CMYK · SRA3 (สูงสุด 33×48.8 ซม.) · หมึกพิเศษส่งเครื่อง PC series</p>
       </div>
@@ -177,6 +179,8 @@
           <input id="sColors" type="number" min="1" max="8" value="2">
           <div class="lbl">ขนาด (ซม.) <span class="req">*</span></div>
           <div class="two"><input id="sW" type="number" step="0.1" value="10" placeholder="กว้าง (ซม.)"><input id="sH" type="number" step="0.1" value="5" placeholder="สูง (ซม.)"></div>
+          <div class="lbl">หลังพิมพ์</div>
+          <div class="fin-box" id="finBoxScreen"></div>
         </div>
       </div>
 
@@ -335,7 +339,18 @@ function calcInkjet(o){
   const base=rate*area; return { area, rate, base, rush, total:base+rush, quote:false };
 }
 function tierByQty(tiers,qty){ for(const t of tiers){ const max=t[0]; if(max==null||!isFinite(max)||qty<=max) return t[1]; } return tiers[tiers.length-1][1]; }
-function calcScreen(o){ const area=o.wcm*o.hcm; const plate=SCREEN.plate*o.colors; const per=tierByQty(SCREEN.print,o.qty); const print=per*o.colors*o.qty; const mat=((SCREEN.mats[o.mat]||{}).ppc||0)*area*o.qty; return { area, plate, per, print, mat, total:plate+print+mat }; }
+/* ค่าหลังพิมพ์ (ใช้ร่วม): perPiece×จำนวน หรือ perSheet×จำนวนแผ่น, ขั้นต่ำตาม min */
+function finishingCost(finArr, qty, sheetCount){
+  let total=0; const list=[];
+  (finArr||[]).forEach(k=>{ const f=FINISHING[k]; if(!f) return; let c=f.perPiece!==undefined?f.perPiece*qty:f.perSheet*sheetCount; c=Math.max(c,f.min||0); total+=c; list.push({name:f.name,cost:c}); });
+  return { total, list };
+}
+function calcScreen(o){
+  const area=o.wcm*o.hcm; const plate=SCREEN.plate*o.colors; const per=tierByQty(SCREEN.print,o.qty);
+  const print=per*o.colors*o.qty; const mat=((SCREEN.mats[o.mat]||{}).ppc||0)*area*o.qty;
+  const fin=finishingCost(o.finishing, o.qty, o.qty);   // สกรีนคิดต่อชิ้น
+  return { area, plate, per, print, mat, fin:fin.total, finList:fin.list, total:plate+print+mat+fin.total };
+}
 function digitalNup(wcm,hcm){ const W=DIGITAL.sheetW,H=DIGITAL.sheetH,fw=wcm+0.4,fh=hcm+0.4; const a=Math.floor(W/fw)*Math.floor(H/fh),b=Math.floor(W/fh)*Math.floor(H/fw); return Math.max(a,b); }
 function calcDigital(o){
   const nUp=digitalNup(o.wcm,o.hcm); if(!isFinite(nUp)||nUp<=0) return { error:true, nUp:0 };
@@ -344,8 +359,9 @@ function calcDigital(o){
   const click=sheets*pages*(DIGITAL.clickCMYK+(o.special||0)*DIGITAL.clickSpecial);
   const mt=DIGITAL.mats[o.matKey]||{pricePerKg:32};
   const paper=sheets*(DIGITAL.sheetW*DIGITAL.sheetH*o.gsm/1e7*mt.pricePerKg);
-  const cost=paper+click+DIGITAL.setup;
-  return { nUp, sheets, pages, paper, click, setup:DIGITAL.setup, cost, total:cost*(1+DIGITAL.profitPct) };
+  const fin=finishingCost(o.finishing, o.qty, sheets);
+  const cost=paper+click+DIGITAL.setup+fin.total;
+  return { nUp, sheets, pages, paper, click, fin:fin.total, finList:fin.list, setup:DIGITAL.setup, cost, total:cost*(1+DIGITAL.profitPct) };
 }
 function buildInkjetOptions(){ const g={}; for(const k in INKJET){ const m=INKJET[k]; (g[m.cat]=g[m.cat]||[]).push([k,m]); } let h=''; for(const c in g){ h+='<optgroup label="'+c+'">'+g[c].map(([k,m])=>'<option value="'+k+'">'+m.name+(m.mode==='quote'?' — สอบถามราคา':'')+'</option>').join('')+'</optgroup>'; } return h; }
 
@@ -476,8 +492,8 @@ function onInkjetMedia(){
 function specFor(){
   const sys = ST.sys || 'offset';
   if(sys==='inkjet') return { sys, media:el('iMat').value, dpi:el('iDpi').value, wm:+el('iW').value, hm:+el('iH').value, rush:el('iRush').checked };
-  if(sys==='digital') return { sys, matKey:el('dMat').value, gsm:+el('dGsm').value, wcm:+el('dW').value, hcm:+el('dH').value, sides:+el('dSides').value, special:+el('dSpecial').value };
-  if(sys==='screen') return { sys, mat:el('sMat').value, colors:+el('sColors').value, wcm:+el('sW').value, hcm:+el('sH').value };
+  if(sys==='digital') return { sys, matKey:el('dMat').value, gsm:+el('dGsm').value, wcm:+el('dW').value, hcm:+el('dH').value, sides:+el('dSides').value, special:+el('dSpecial').value, finishing:[...document.querySelectorAll('#finBoxDigital input:checked')].map(c=>c.value) };
+  if(sys==='screen') return { sys, mat:el('sMat').value, colors:+el('sColors').value, wcm:+el('sW').value, hcm:+el('sH').value, finishing:[...document.querySelectorAll('#finBoxScreen input:checked')].map(c=>c.value) };
   return { sys:'offset', ...specBase() };
 }
 /* คำนวณแบบรวม → { total, unit, quote?, machine?, sheets?, breakdown:[[label,amount]] } */
@@ -495,12 +511,16 @@ function calcFor(base, qty){
     return { total:r.total, unit:r.total/qty, area:r.area, rate:r.rate, breakdown:bd };
   }
   if(base.sys==='digital'){
-    const r=calcDigital({matKey:base.matKey,gsm:base.gsm,wcm:base.wcm,hcm:base.hcm,sides:base.sides,special:base.special,qty});
+    const r=calcDigital({matKey:base.matKey,gsm:base.gsm,wcm:base.wcm,hcm:base.hcm,sides:base.sides,special:base.special,qty,finishing:base.finishing});
     if(r.error) return null;
-    return { total:r.total, unit:r.total/qty, sheets:r.sheets, nUp:r.nUp, pages:r.pages, breakdown:[['ค่ากระดาษ',r.paper],['ค่าคลิก',r.click],['ค่าเซ็ตงาน',r.setup]] };
+    const bd=[['ค่ากระดาษ',r.paper],['ค่าคลิก',r.click],['ค่าเซ็ตงาน',r.setup]];
+    if(r.fin>0) bd.push(['ค่าหลังพิมพ์',r.fin]);
+    return { total:r.total, unit:r.total/qty, sheets:r.sheets, nUp:r.nUp, pages:r.pages, finList:r.finList, breakdown:bd };
   }
-  const r=calcScreen({mat:base.mat,colors:base.colors,wcm:base.wcm,hcm:base.hcm,qty});
-  return { total:r.total, unit:r.total/qty, breakdown:[['ค่าบล็อก',r.plate],['ค่าพิมพ์',r.print],['ค่าวัสดุ',r.mat]] };
+  const r=calcScreen({mat:base.mat,colors:base.colors,wcm:base.wcm,hcm:base.hcm,qty,finishing:base.finishing});
+  const bd=[['ค่าบล็อก',r.plate],['ค่าพิมพ์',r.print],['ค่าวัสดุ',r.mat]];
+  if(r.fin>0) bd.push(['ค่าหลังพิมพ์',r.fin]);
+  return { total:r.total, unit:r.total/qty, finList:r.finList, breakdown:bd };
 }
 
 /* สร้างสเปกจากฟอร์มปัจจุบัน (ยังไม่ใส่ qty) */
@@ -621,9 +641,11 @@ function quoteRows(base, r, q){
   if(base.sys==='digital'){
     return [...common, ['ระบบ','ดิจิตอล (Fujifilm SC180)'], ['กระดาษ',DIGITAL.mats[base.matKey].name+' '+base.gsm+' แกรม'], ['ขนาด',base.wcm+' × '+base.hcm+' ซม.'],
       ['พิมพ์', (base.sides===2?'2 หน้า':'1 หน้า')+(base.special>0?' · หมึกพิเศษ '+base.special+' สถานี':'')],
-      ['จำนวน',q.toLocaleString()+' ชิ้น'], ['แผ่นพิมพ์', r.sheets.toLocaleString()+' แผ่น SRA3 (วาง '+r.nUp+'/แผ่น)']];
+      ['จำนวน',q.toLocaleString()+' ชิ้น'], ['แผ่นพิมพ์', r.sheets.toLocaleString()+' แผ่น SRA3 (วาง '+r.nUp+'/แผ่น)'],
+      ['หลังพิมพ์', (r.finList&&r.finList.length)?r.finList.map(f=>f.name).join(', '):'-']];
   }
-  return [...common, ['ระบบ','ซิลค์สกรีน'], ['วัสดุ',SCREEN.mats[base.mat].name], ['จำนวนสี',base.colors], ['ขนาด',base.wcm+' × '+base.hcm+' ซม.'], ['จำนวน',q.toLocaleString()+' ชิ้น']];
+  return [...common, ['ระบบ','ซิลค์สกรีน'], ['วัสดุ',SCREEN.mats[base.mat].name], ['จำนวนสี',base.colors], ['ขนาด',base.wcm+' × '+base.hcm+' ซม.'], ['จำนวน',q.toLocaleString()+' ชิ้น'],
+    ['หลังพิมพ์', (r.finList&&r.finList.length)?r.finList.map(f=>f.name).join(', '):'-']];
 }
 function quoteTextGeneric(rows, r, base){
   let t = "ใบเสนอราคา — Thai Print Inter Group\n";
@@ -658,8 +680,11 @@ function go(n){
 if(typeof document!=='undefined') (function init(){
   el('cat').innerHTML = Object.entries(CAT_LABEL).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('');
   el('size').innerHTML = Object.entries(PRESET_SIZES).map(([k,v])=>'<option value="'+k+'">'+v.label+'</option>').join('');
-  el('finBox').innerHTML = Object.entries(FINISHING).map(([k,v])=>
+  const finHTML = Object.entries(FINISHING).map(([k,v])=>
     '<label><input type="checkbox" value="'+k+'"> '+v.name+'</label>').join('');
+  el('finBox').innerHTML = finHTML;
+  el('finBoxDigital').innerHTML = finHTML;
+  el('finBoxScreen').innerHTML = finHTML;
   // วัสดุระบบอื่น
   el('iMat').innerHTML = buildInkjetOptions(); onInkjetMedia();
   el('sMat').innerHTML = Object.entries(SCREEN.mats).map(([k,v])=>'<option value="'+k+'">'+v.name+'</option>').join('');
