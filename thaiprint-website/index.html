@@ -65,8 +65,8 @@
   /* calculator */
   #calc{background:#fff}
   .calc-box{max-width:820px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-  .tabs{display:flex;border-bottom:1px solid var(--line)}
-  .tabs button{flex:1;padding:15px;background:#fff;border:none;font-family:inherit;font-size:16px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+  .tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .tabs button{flex:1 1 25%;min-width:130px;padding:14px 8px;background:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
   .tabs button.active{color:var(--navy);border-bottom-color:var(--orange)}
   .calc-body{padding:26px}
   .field{margin-bottom:16px}
@@ -187,12 +187,14 @@
     <div class="sec-head"><h2>ประเมินราคาออนไลน์</h2><p>คำนวณด่วนด้านล่าง · <a href="estimate.html" style="color:var(--orange2);font-weight:700">เปิด Wizard 4 ขั้นตอน →</a> · <a href="ThaiPrint-Calculator-Offline.xlsx" style="color:var(--navy);font-weight:700">⬇️ ดาวน์โหลด Excel (ออฟไลน์)</a></p></div>
     <div class="calc-box">
       <div class="tabs">
-        <button id="tabOffset" class="active" onclick="switchTab('offset')">🖨️ ออฟเซ็ต (สติ๊กเกอร์/ฉลาก)</button>
-        <button id="tabInkjet" onclick="switchTab('inkjet')">🚩 อิงค์เจ็ท (ป้าย/ไวนิล)</button>
+        <button id="tabInkjet" class="active" onclick="switchTab('inkjet')">🚩 อิงค์เจ็ท</button>
+        <button id="tabOffset" onclick="switchTab('offset')">🖨️ ออฟเซ็ต</button>
+        <button id="tabDigital" onclick="switchTab('digital')">💻 ดิจิตอล</button>
+        <button id="tabScreen" onclick="switchTab('screen')">🎨 ซิลค์สกรีน</button>
       </div>
 
       <!-- Offset -->
-      <div class="calc-body" id="bodyOffset">
+      <div class="calc-body" id="bodyOffset" style="display:none">
         <div class="row2">
           <div class="field">
             <label>วัสดุ <span class="req">*</span></label>
@@ -217,7 +219,7 @@
       </div>
 
       <!-- Inkjet -->
-      <div class="calc-body" id="bodyInkjet" style="display:none">
+      <div class="calc-body" id="bodyInkjet">
         <div class="row2">
           <div class="field">
             <label>วัสดุ <span class="req">*</span></label>
@@ -242,6 +244,37 @@
         </div>
         <button class="btn btn-orange" style="width:100%" onclick="runInkjet()">คำนวณราคา</button>
         <div class="result empty" id="iResult">กรอกข้อมูลแล้วกด “คำนวณราคา”</div>
+      </div>
+
+      <!-- Digital -->
+      <div class="calc-body" id="bodyDigital" style="display:none">
+        <div class="row2">
+          <div class="field"><label>วัสดุ <span class="req">*</span></label><select id="dMat"></select></div>
+          <div class="field"><label>จำนวน (ชิ้น) <span class="req">*</span></label><input id="dQty" type="number" value="200" min="1"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>กว้าง (ซม.) <span class="req">*</span></label><input id="dW" type="number" value="9" min="1" step="0.1"></div>
+          <div class="field"><label>สูง (ซม.) <span class="req">*</span></label><input id="dH" type="number" value="5.4" min="1" step="0.1"></div>
+        </div>
+        <button class="btn btn-orange" style="width:100%" onclick="runDigital()">คำนวณราคา</button>
+        <div class="result empty" id="dResult">กรอกข้อมูลแล้วกด “คำนวณราคา”</div>
+        <div class="hint" style="margin-top:8px">ดิจิตอลพิมพ์เร็ว จำนวนน้อย ไม่มีค่าเพลท — เหมาะกับสติ๊กเกอร์/ฉลาก/นามบัตรจำนวนไม่มาก</div>
+      </div>
+
+      <!-- Silkscreen -->
+      <div class="calc-body" id="bodyScreen" style="display:none">
+        <div class="row2">
+          <div class="field"><label>วัสดุ <span class="req">*</span></label><select id="sMat"></select></div>
+          <div class="field"><label>จำนวนสี <span class="req">*</span></label><input id="sColors" type="number" value="2" min="1" max="8"></div>
+        </div>
+        <div class="row3">
+          <div class="field"><label>กว้าง (ซม.) <span class="req">*</span></label><input id="sW" type="number" value="10" min="1" step="0.1"></div>
+          <div class="field"><label>สูง (ซม.) <span class="req">*</span></label><input id="sH" type="number" value="5" min="1" step="0.1"></div>
+          <div class="field"><label>จำนวน (ชิ้น) <span class="req">*</span></label><input id="sQty" type="number" value="1000" min="1"></div>
+        </div>
+        <button class="btn btn-orange" style="width:100%" onclick="runScreen()">คำนวณราคา</button>
+        <div class="result empty" id="sResult">กรอกข้อมูลแล้วกด “คำนวณราคา”</div>
+        <div class="hint" style="margin-top:8px">ซิลค์สกรีนมีค่าบล็อกต่อสี เหมาะกับงานจำนวนมาก/สีน้อย</div>
       </div>
     </div>
   </div>
@@ -392,6 +425,25 @@ const STICKERS = {
   foil:         { name:"สติ๊กเกอร์ฟอยล์ (UV)",              ppc:0.007278, ink:"uv" },
 };
 
+/* ===== ซิลค์สกรีน (Screen) — ค่าบล็อก/สี + ค่าพิมพ์/สี/ชิ้น (tier ตามจำนวน) + วัสดุ ppc (บ./ตร.ซม.) ===== */
+const SCREEN = {
+  plate: 250,
+  print: [[500,2.00],[1000,1.80],[5000,1.50],[Infinity,1.20]], // [maxจำนวน, บ./สี/ชิ้น]
+  mats: {
+    paper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.003}, pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.004},
+    pp:{name:"สติ๊กเกอร์ PP",ppc:0.004}, pet:{name:"สติ๊กเกอร์ PET",ppc:0.005},
+    foil:{name:"สติ๊กเกอร์ฟอยล์",ppc:0.006},
+  },
+};
+/* ===== ดิจิตอล (Digital) — ราคา/ชิ้น (tier ตามจำนวน) + วัสดุ ppc; ไม่มีค่าเพลท ===== */
+const DIGITAL = {
+  perPiece: [[100,12],[500,8],[1000,5.5],[10000,4]], // [maxจำนวน, บ./ชิ้น]
+  mats: {
+    artPaper:{name:"กระดาษอาร์ต",ppc:0.007}, stickerPaper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.010},
+    pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.014}, pp:{name:"สติ๊กเกอร์ PP",ppc:0.012},
+  },
+};
+
 /* โหลดราคาจากหน้า admin (localStorage tp_priceTable) มาทับ default */
 if(typeof localStorage!=='undefined'){
   try{
@@ -409,6 +461,15 @@ if(typeof localStorage!=='undefined'){
       if(Array.isArray(O.vinyl) && INKJET.vinyl) INKJET.vinyl.tiers = O.vinyl.map(t=>[(t[0]==null||!isFinite(t[0]))?null:t[0], {"720":t[1],"1440":t[2]}]);
       if(Array.isArray(O.stpvc) && INKJET.stpvc) INKJET.stpvc.tiers = O.stpvc.map(t=>[(t[0]==null||!isFinite(t[0]))?null:t[0], {"720":t[1],"1440":t[2]}]);
       if(O.flat) for(const k in O.flat){ if(INKJET[k] && INKJET[k].mode==='flat') INKJET[k].flat = Object.assign({}, INKJET[k].flat, O.flat[k]); }
+    }
+    if(O.screen){
+      if(typeof O.screen.plate==='number') SCREEN.plate=O.screen.plate;
+      if(Array.isArray(O.screen.print)) SCREEN.print=O.screen.print;
+      if(O.screen.mats) for(const k in O.screen.mats) SCREEN.mats[k]=Object.assign({},SCREEN.mats[k]||{},O.screen.mats[k]);
+    }
+    if(O.digital){
+      if(Array.isArray(O.digital.perPiece)) DIGITAL.perPiece=O.digital.perPiece;
+      if(O.digital.mats) for(const k in O.digital.mats) DIGITAL.mats[k]=Object.assign({},DIGITAL.mats[k]||{},O.digital.mats[k]);
     }
   }catch(e){}
 }
@@ -460,15 +521,37 @@ function calcInkjet(o){
   return { area, rate, base, rush, total: base+rush, quote:false };
 }
 
+/* ราคาต่อหน่วยตามช่วงจำนวน [maxจำนวน, ราคา] */
+function tierByQty(tiers, qty){ for(const t of tiers){ const max=t[0]; if(max==null||!isFinite(max)||qty<=max) return t[1]; } return tiers[tiers.length-1][1]; }
+/* ซิลค์สกรีน: ค่าบล็อก×สี + ค่าพิมพ์/สี/ชิ้น×สี×จำนวน + วัสดุ×พื้นที่×จำนวน */
+function calcScreen(o){
+  const area=o.wcm*o.hcm;
+  const plate=SCREEN.plate*o.colors;
+  const per=tierByQty(SCREEN.print,o.qty);
+  const print=per*o.colors*o.qty;
+  const mat=((SCREEN.mats[o.mat]||{}).ppc||0)*area*o.qty;
+  return { area, plate, per, print, mat, total: plate+print+mat };
+}
+/* ดิจิตอล: ราคา/ชิ้น×จำนวน + วัสดุ×พื้นที่×จำนวน (ไม่มีค่าเพลท) */
+function calcDigital(o){
+  const area=o.wcm*o.hcm;
+  const per=tierByQty(DIGITAL.perPiece,o.qty);
+  const print=per*o.qty;
+  const mat=((DIGITAL.mats[o.mat]||{}).ppc||0)*area*o.qty;
+  return { area, per, print, mat, total: print+mat };
+}
+
 /* ===== UI ===== */
 const baht = n => "฿" + n.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
 
+const CALC_TABS = ['inkjet','offset','digital','screen'];
 function switchTab(t){
-  const off = t==='offset';
-  document.getElementById('tabOffset').classList.toggle('active',off);
-  document.getElementById('tabInkjet').classList.toggle('active',!off);
-  document.getElementById('bodyOffset').style.display = off?'block':'none';
-  document.getElementById('bodyInkjet').style.display = off?'none':'block';
+  CALC_TABS.forEach(function(s){
+    const cap = s.charAt(0).toUpperCase()+s.slice(1);
+    const btn = document.getElementById('tab'+cap), body = document.getElementById('body'+cap);
+    if(btn) btn.classList.toggle('active', s===t);
+    if(body) body.style.display = (s===t)?'block':'none';
+  });
 }
 
 function runOffset(){
@@ -536,12 +619,41 @@ function runInkjet(){
     '<div class="hint" style="text-align:right">≈ '+baht(unit)+' /ป้าย</div>';
 }
 
+function runScreen(){
+  const qty=+document.getElementById('sQty').value;
+  const r=calcScreen({ mat:document.getElementById('sMat').value, colors:+document.getElementById('sColors').value,
+    wcm:+document.getElementById('sW').value, hcm:+document.getElementById('sH').value, qty:qty });
+  const el=document.getElementById('sResult'); el.classList.remove('empty');
+  el.innerHTML='<table><tr><td>พื้นที่/ชิ้น</td><td>'+r.area.toLocaleString('th-TH',{maximumFractionDigits:2})+' ตร.ซม.</td></tr>'+
+    '<tr><td>ค่าบล็อก (เพลท)</td><td>'+baht(r.plate)+'</td></tr>'+
+    '<tr><td>ค่าพิมพ์</td><td>'+baht(r.print)+'</td></tr>'+
+    '<tr><td>ค่าวัสดุ</td><td>'+baht(r.mat)+'</td></tr></table>'+
+    '<div class="total"><span>ราคารวมโดยประมาณ</span><b>'+baht(r.total)+'</b></div>'+
+    '<div class="hint" style="text-align:right">≈ '+baht(r.total/qty)+' /ชิ้น</div>';
+}
+
+function runDigital(){
+  const qty=+document.getElementById('dQty').value;
+  const r=calcDigital({ mat:document.getElementById('dMat').value,
+    wcm:+document.getElementById('dW').value, hcm:+document.getElementById('dH').value, qty:qty });
+  const el=document.getElementById('dResult'); el.classList.remove('empty');
+  el.innerHTML='<table><tr><td>พื้นที่/ชิ้น</td><td>'+r.area.toLocaleString('th-TH',{maximumFractionDigits:2})+' ตร.ซม.</td></tr>'+
+    '<tr><td>ราคาพิมพ์/ชิ้น</td><td>'+baht(r.per)+'</td></tr>'+
+    '<tr><td>ค่าพิมพ์</td><td>'+baht(r.print)+'</td></tr>'+
+    '<tr><td>ค่าวัสดุ</td><td>'+baht(r.mat)+'</td></tr></table>'+
+    '<div class="total"><span>ราคารวมโดยประมาณ</span><b>'+baht(r.total)+'</b></div>'+
+    '<div class="hint" style="text-align:right">≈ '+baht(r.total/qty)+' /ชิ้น</div>';
+}
+
 /* render arrays (เฉพาะบนเบราว์เซอร์ — ข้ามตอนรันเทสต์ใน node) */
 if(typeof document!=='undefined'){
   document.getElementById('oMat').innerHTML = Object.entries(STICKERS).map(([k,v])=>
     '<option value="'+k+'" data-ppc="'+v.ppc+'" data-ink="'+v.ink+'">'+v.name+'</option>').join('');
   document.getElementById('iMat').innerHTML = buildInkjetOptions(); // วัสดุอิงค์เจ็ทจากรีจิสทรี (จัดกลุ่มตามหมวด)
   onInkjetMedia(); // ตั้งความละเอียดเริ่มต้นตามวัสดุอิงค์เจ็ท
+  document.getElementById('sMat').innerHTML = Object.entries(SCREEN.mats).map(([k,v])=>'<option value="'+k+'">'+v.name+'</option>').join('');
+  document.getElementById('dMat').innerHTML = Object.entries(DIGITAL.mats).map(([k,v])=>'<option value="'+k+'">'+v.name+'</option>').join('');
+  switchTab('inkjet'); // เริ่มที่แท็บอิงค์เจ็ท
 
   document.getElementById('promoGrid').innerHTML = PROMOS.map(p=>
     '<div class="promo">'+(p.tag?'<span class="tag">'+p.tag+'</span>':'')+
@@ -559,7 +671,7 @@ if(typeof document!=='undefined'){
 }
 
 /* export สำหรับเทสต์ (node) */
-if(typeof module!=='undefined' && module.exports){ module.exports = { calcOffset, calcInkjet, SPOIL_PER_SIDE, PRINT_COST, INKJET, STICKERS }; }
+if(typeof module!=='undefined' && module.exports){ module.exports = { calcOffset, calcInkjet, calcScreen, calcDigital, SPOIL_PER_SIDE, PRINT_COST, INKJET, STICKERS, SCREEN, DIGITAL }; }
 </script>
 </body>
 </html>

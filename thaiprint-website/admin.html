@@ -154,6 +154,19 @@ const DEFAULTS = {
     rigid:        { name:"Rigid Board (พิมพ์ UV ตรง)",     cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["1440"],       ink:"UV Flatbed" },
     bannerMesh:   { name:"Banner Mesh (ตาข่ายโฆษณา)",      cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["720"],        ink:"Solvent/Eco-Solvent" },
   },
+  // ซิลค์สกรีน (ต้องตรงกับ SCREEN ใน index.html)
+  screen:{
+    plate:250,
+    print:[[500,2.00],[1000,1.80],[5000,1.50],[null,1.20]],
+    mats:{ paper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.003}, pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.004},
+      pp:{name:"สติ๊กเกอร์ PP",ppc:0.004}, pet:{name:"สติ๊กเกอร์ PET",ppc:0.005}, foil:{name:"สติ๊กเกอร์ฟอยล์",ppc:0.006} },
+  },
+  // ดิจิตอล (ต้องตรงกับ DIGITAL ใน index.html)
+  digital:{
+    perPiece:[[100,12],[500,8],[1000,5.5],[10000,4]],
+    mats:{ artPaper:{name:"กระดาษอาร์ต",ppc:0.007}, stickerPaper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.010},
+      pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.014}, pp:{name:"สติ๊กเกอร์ PP",ppc:0.012} },
+  },
 };
 
 let data = load();
@@ -184,6 +197,8 @@ function modeSel(p,v){ return '<select class="pf" data-t="str" data-path="'+p+'"
 function inkSel(p,v){ return '<select class="pf" data-t="str" data-path="'+p+'"><option value="conventional"'+(v==='conventional'?' selected':'')+'>คอนเวนชั่นนัล</option><option value="uv"'+(v==='uv'?' selected':'')+'>UV</option></select>'; }
 function unitSel(p,v){ return '<select class="pf" data-t="str" data-path="'+p+'"><option value="perPiece"'+(v==='perPiece'?' selected':'')+'>บ./ชิ้น</option><option value="perSheet"'+(v==='perSheet'?' selected':'')+'>บ./ใบพิมพ์</option></select>'; }
 const delBtn = (cat,k)=>'<button class="delx" onclick="delItem(\''+cat+'\',\''+k+'\')" title="ลบรายการ">🗑️</button>';
+const delMatBtn = (sys,k)=>'<button class="delx" onclick="delMat(\''+sys+'\',\''+k+'\')" title="ลบรายการ">🗑️</button>';
+function delMat(sys,k){ if(!confirm('ลบรายการนี้?')) return; data=collect(); delete data[sys].mats[k]; render(); }
 let seq = 1;
 
 /* เพิ่ม/ลบรายการ (เก็บค่าที่แก้ไว้ก่อน render ใหม่) */
@@ -194,6 +209,8 @@ function addItem(cat){
   if(cat==='stickers') data.stickers[key] = { name:'วัสดุใหม่', ppc:0.004, ink:'uv' };
   if(cat==='finishing')data.finishing[key]= { name:'งานหลังพิมพ์ใหม่', perPiece:0.10, min:200 };
   if(cat==='inkjet')   data.inkjet[key]   = { name:'วัสดุอิงค์เจ็ทใหม่', cat:'อื่นๆ', mode:'flat', dpis:['720','1440'], ink:'', flat:{normal:0,rush:0} };
+  if(cat==='screenMat')  data.screen.mats[key]  = { name:'วัสดุใหม่', ppc:0.004 };
+  if(cat==='digitalMat') data.digital.mats[key] = { name:'วัสดุใหม่', ppc:0.008 };
   render();
 }
 /* เปลี่ยนโหมดราคาอิงค์เจ็ท → เตรียมโครงสร้างราคาให้ตรงโหมด แล้ว render ใหม่ */
@@ -297,6 +314,31 @@ function render(){
   }
   h+='<button class="btn btn-ghost addbtn" onclick="addItem(\'inkjet\')">+ เพิ่มวัสดุอิงค์เจ็ท</button>';
   h+='</div>';
+
+  // ซิลค์สกรีน
+  if(data.screen){
+    h+='<div class="card"><h3>ซิลค์สกรีน — ค่าบล็อก + ค่าพิมพ์ + วัสดุ</h3>';
+    h+='<div class="row"><div class="nm">ค่าบล็อก/สี (บ.)</div>'+N('screen.plate',data.screen.plate)+'<div></div></div>';
+    h+='<div class="colh">ค่าพิมพ์/สี/ชิ้น ตามช่วงจำนวน (≤จำนวน | บ.)</div>';
+    (data.screen.print||[]).forEach((t,i)=>{ h+='<div class="row">'+MAXN('screen.print.'+i+'.0',t[0])+N('screen.print.'+i+'.1',t[1])+'<div></div></div>'; });
+    h+='<div class="colh">วัสดุ (ชื่อ | บ./ตร.ซม. | ลบ)</div>';
+    for(const k in data.screen.mats){ const mt=data.screen.mats[k];
+      h+='<div class="irow">'+T('screen.mats.'+k+'.name',mt.name)+N('screen.mats.'+k+'.ppc',mt.ppc)+'<div></div>'+delMatBtn('screen',k)+'</div>'; }
+    h+='<button class="btn btn-ghost addbtn" onclick="addItem(\'screenMat\')">+ เพิ่มวัสดุซิลค์สกรีน</button>';
+    h+='</div>';
+  }
+
+  // ดิจิตอล
+  if(data.digital){
+    h+='<div class="card"><h3>ดิจิตอล — ราคา/ชิ้น + วัสดุ <span style="font-size:12px;color:var(--muted)">(ไม่มีค่าเพลท)</span></h3>';
+    h+='<div class="colh">ราคาพิมพ์/ชิ้น ตามช่วงจำนวน (≤จำนวน | บ.)</div>';
+    (data.digital.perPiece||[]).forEach((t,i)=>{ h+='<div class="row">'+MAXN('digital.perPiece.'+i+'.0',t[0])+N('digital.perPiece.'+i+'.1',t[1])+'<div></div></div>'; });
+    h+='<div class="colh">วัสดุ (ชื่อ | บ./ตร.ซม. | ลบ)</div>';
+    for(const k in data.digital.mats){ const mt=data.digital.mats[k];
+      h+='<div class="irow">'+T('digital.mats.'+k+'.name',mt.name)+N('digital.mats.'+k+'.ppc',mt.ppc)+'<div></div>'+delMatBtn('digital',k)+'</div>'; }
+    h+='<button class="btn btn-ghost addbtn" onclick="addItem(\'digitalMat\')">+ เพิ่มวัสดุดิจิตอล</button>';
+    h+='</div>';
+  }
 
   document.getElementById('editor').innerHTML = h;
 }
