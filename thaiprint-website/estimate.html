@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ประเมินราคางานพิมพ์ — Thai Print Inter Group</title>
-<meta name="description" content="Wizard ประเมินราคางานพิมพ์ออฟเซ็ต 4 ขั้นตอน เลือกหมวด กระดาษ สี ขนาด หลังพิมพ์ ได้ราคาและใบเสนอราคาทันที" />
+<meta name="description" content="Wizard ประเมินราคางานพิมพ์ 4 ระบบ (อิงค์เจ็ท/ออฟเซ็ต/ดิจิตอล/ซิลค์สกรีน) เลือกวัสดุ สเปก จำนวน ได้ราคาและใบเสนอราคาทันที" />
 <style>
   :root{
     --navy:#12284c; --navy2:#1c3a6e; --orange:#f7941d; --orange2:#e07c00;
@@ -38,6 +38,12 @@
   .steps .lb{margin-left:8px;font-size:14px;color:var(--muted)}
   .steps .s.active .lb{color:var(--teal);font-weight:700}
   .steps .bar{height:2px;background:var(--line);flex:1;margin:0 10px}
+
+  /* system tab bar */
+  .systabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+  .systabs button{flex:1 1 22%;min-width:120px;padding:12px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;font-family:inherit;font-size:15px;font-weight:700;color:var(--muted);cursor:pointer;transition:.15s}
+  .systabs button:hover{border-color:var(--teal)}
+  .systabs button.active{background:var(--navy);color:#fff;border-color:var(--navy)}
 
   h2.step-title{font-size:20px;color:var(--navy);margin-bottom:18px}
   .grid{display:grid;grid-template-columns:150px 1fr;gap:14px 16px;align-items:center}
@@ -84,12 +90,23 @@
 <div class="wrap">
   <div class="crumb">หน้าแรก » ประเมินราคางานพิมพ์ <span style="float:right;color:#9aa4b5;font-size:12px">เวอร์ชัน v1.2 · มีเลขที่เอกสาร</span></div>
   <div class="card">
+    <!-- system tab bar -->
+    <div class="systabs" id="systabs">
+      <button data-sys="inkjet" onclick="switchSys('inkjet')">🚩 อิงค์เจ็ท</button>
+      <button data-sys="offset" class="active" onclick="switchSys('offset')">🖨️ ออฟเซ็ต</button>
+      <button data-sys="digital" onclick="switchSys('digital')">💻 ดิจิตอล</button>
+      <button data-sys="screen" onclick="switchSys('screen')">🎨 ซิลค์สกรีน</button>
+    </div>
+
     <!-- step indicator -->
     <div class="steps" id="stepbar"></div>
 
     <!-- STEP 1 -->
     <div class="pane" id="p1">
-      <h2 class="step-title">① เลือกและกำหนดหมวดงานพิมพ์</h2>
+      <h2 class="step-title" id="p1title">① เลือกและกำหนดสเปกงานพิมพ์</h2>
+
+      <!-- OFFSET pane -->
+      <div id="paneOffset">
       <div class="grid">
         <div class="lbl">หมวดงานพิมพ์ <span class="req">*</span></div>
         <select id="cat" onchange="onCat()"></select>
@@ -118,6 +135,44 @@
         <div class="lbl">สีพิเศษ</div>
         <div><label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="checkbox" id="pantone"> มีสีพิเศษ/Pantone (ระบุในใบเสนอราคา — ไม่กระทบราคาประเมิน)</label></div>
       </div>
+      </div><!-- /paneOffset -->
+
+      <!-- INKJET pane -->
+      <div id="paneInkjet" style="display:none">
+        <div class="grid">
+          <div class="lbl">วัสดุ <span class="req">*</span></div>
+          <select id="iMat" onchange="onInkjetMedia()"></select>
+          <div class="lbl">ความละเอียด <span class="req">*</span></div>
+          <select id="iDpi"></select>
+          <div class="lbl">ขนาด (เมตร) <span class="req">*</span></div>
+          <div class="two"><input id="iW" type="number" step="0.1" value="3" placeholder="กว้าง (ม.)"><input id="iH" type="number" step="0.1" value="1" placeholder="สูง (ม.)"></div>
+          <div class="lbl">งานด่วน</div>
+          <div><label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="checkbox" id="iRush"> งานด่วน (บวกเพิ่มเฉพาะไวนิล/สติ๊กเกอร์ งานเล็ก 1–49 ตร.ม.)</label></div>
+        </div>
+      </div>
+
+      <!-- DIGITAL pane -->
+      <div id="paneDigital" style="display:none">
+        <div class="grid">
+          <div class="lbl">วัสดุ <span class="req">*</span></div>
+          <select id="dMat"></select>
+          <div class="lbl">ขนาด (ซม.) <span class="req">*</span></div>
+          <div class="two"><input id="dW" type="number" step="0.1" value="9" placeholder="กว้าง (ซม.)"><input id="dH" type="number" step="0.1" value="5.4" placeholder="สูง (ซม.)"></div>
+        </div>
+      </div>
+
+      <!-- SCREEN pane -->
+      <div id="paneScreen" style="display:none">
+        <div class="grid">
+          <div class="lbl">วัสดุ <span class="req">*</span></div>
+          <select id="sMat"></select>
+          <div class="lbl">จำนวนสี <span class="req">*</span></div>
+          <input id="sColors" type="number" min="1" max="8" value="2">
+          <div class="lbl">ขนาด (ซม.) <span class="req">*</span></div>
+          <div class="two"><input id="sW" type="number" step="0.1" value="10" placeholder="กว้าง (ซม.)"><input id="sH" type="number" step="0.1" value="5" placeholder="สูง (ซม.)"></div>
+        </div>
+      </div>
+
       <div class="actions">
         <span></span>
         <button class="btn btn-teal" onclick="go(2)">ขั้นตอนต่อไป ›</button>
@@ -129,7 +184,7 @@
       <h2 class="step-title">② เลือกจำนวนและราคา</h2>
       <p class="muted" style="margin-bottom:12px">ระบบเลือกเครื่องที่คุ้มที่สุดให้อัตโนมัติ (ตัด 4 / ตัด 2) — คลิกเลือกจำนวน หรือกรอกเอง</p>
       <table class="qty">
-        <thead><tr><th>จำนวน (ชิ้น)</th><th>เครื่อง</th><th>ราคารวม</th><th>ราคา/ชิ้น</th></tr></thead>
+        <thead><tr><th>จำนวน</th><th>ระบบ/เครื่อง</th><th>ราคารวม</th><th>ราคา/หน่วย</th></tr></thead>
         <tbody id="qtyRows"></tbody>
       </table>
       <div class="grid" style="margin-top:16px;grid-template-columns:150px 1fr">
@@ -228,7 +283,57 @@ const FINISHING = {
   perforate:     { name:"ปรุฉีก", perPiece:0.10, min:200 },
 };
 
+/* ===== วัสดุอิงค์เจ็ท (รีจิสทรีเดียว ตรงกับ index.html/admin.html) ===== */
+const INKJET = {
+  vinyl:        { name:"ไวนิล Frontlit (ทึบแสง)",        cat:"ไวนิล / แบนเนอร์", mode:"volume", dpis:["720","1440"], ink:"Solvent/Eco-Solvent/Latex", rush:true, tiers:[[10,{"720":180,"1440":220}],[null,{"720":120,"1440":150}]] },
+  vinylBacklit: { name:"ไวนิล Backlit (โปร่งแสง)",       cat:"ไวนิล / แบนเนอร์", mode:"quote",  dpis:["1440"],       ink:"Solvent/Eco-Solvent" },
+  vinylBlockout:{ name:"ไวนิล Blockout (กันแสงทะลุ)",    cat:"ไวนิล / แบนเนอร์", mode:"quote",  dpis:["720","1440"], ink:"Solvent/Eco-Solvent" },
+  stpvc:        { name:"สติ๊กเกอร์ PVC ขาว (Outdoor)",   cat:"สติ๊กเกอร์",       mode:"volume", dpis:["720","1440"], ink:"Eco-Solvent/Latex/UV", rush:true, tiers:[[10,{"720":150,"1440":190}],[null,{"720":110,"1440":150}]] },
+  stClear:      { name:"สติ๊กเกอร์ PVC ใส (Clear)",       cat:"สติ๊กเกอร์",       mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/UV" },
+  stSeethrough: { name:"สติ๊กเกอร์ Seethrough (One-Way Vision)", cat:"สติ๊กเกอร์", mode:"quote", dpis:["1440"],       ink:"Eco-Solvent/UV" },
+  st3m:         { name:"สติ๊กเกอร์ 3M (พรีเมียม/ถอดได้)", cat:"สติ๊กเกอร์",       mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/Latex" },
+  stBacklit:    { name:"สติ๊กเกอร์ Backlit (ป้ายไฟ)",    cat:"สติ๊กเกอร์",       mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/UV" },
+  ppSticker:    { name:"PP Sticker (สังเคราะห์)",         cat:"สติ๊กเกอร์",       mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/Latex" },
+  photo:        { name:"โฟโต้เปเปอร์ (Glossy Photo)",     cat:"กระดาษ",           mode:"flat",   dpis:["1440"],       ink:"Dye/Pigment", flat:{normal:250,rush:350} },
+  ppPaper:      { name:"PP Paper (เคลือบ กันน้ำ)",        cat:"กระดาษ",           mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/Latex" },
+  fineArt:      { name:"Matte / Satin / Fine Art Paper",  cat:"กระดาษ",           mode:"quote",  dpis:["1440","2880"],ink:"Pigment" },
+  blueBack:     { name:"Blue Back Paper (หลังน้ำเงิน)",   cat:"กระดาษ",           mode:"quote",  dpis:["720"],        ink:"Solvent" },
+  filmBacklit:  { name:"Film Backlit (ฟิล์มป้ายไฟ)",     cat:"ฟิล์ม",            mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/UV" },
+  filmSpecial:  { name:"Clear / Reflective / Floor Film", cat:"ฟิล์ม",            mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/UV" },
+  fabric:       { name:"ผ้า IT / ผ้าไวนิล (Backdrop)",   cat:"ผ้า / แคนวาส",     mode:"flat",   dpis:["1440"],       ink:"Dye-Sub/Eco-Solvent", flat:{normal:300,rush:420} },
+  fabricMesh:   { name:"ผ้า Tension / Mesh",             cat:"ผ้า / แคนวาส",     mode:"quote",  dpis:["720","1440"], ink:"Dye-Sub/Eco-Solvent" },
+  dyeSub:       { name:"Dye-Sub Fabric (ซับลิเมชัน)",    cat:"ผ้า / แคนวาส",     mode:"quote",  dpis:["720","1440"], ink:"Dye-Sublimation" },
+  canvas:       { name:"ผ้าแคนวาส (Canvas)",             cat:"ผ้า / แคนวาส",     mode:"flat",   dpis:["720","1440"], ink:"Pigment/Latex", flat:{normal:400,rush:550} },
+  wallpaper:    { name:"Wallpaper (วอลเปเปอร์)",         cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["1440"],       ink:"Latex/Eco-Solvent" },
+  magnetic:     { name:"Magnetic (แม่เหล็ก)",            cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["1440"],       ink:"Eco-Solvent/UV" },
+  tarpaulin:    { name:"Tarpaulin (ผ้าใบกันน้ำ)",        cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["720"],        ink:"Solvent" },
+  rigid:        { name:"Rigid Board (พิมพ์ UV ตรง)",     cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["1440"],       ink:"UV Flatbed" },
+  bannerMesh:   { name:"Banner Mesh (ตาข่ายโฆษณา)",      cat:"พิเศษ / แผ่นแข็ง",  mode:"quote",  dpis:["720"],        ink:"Solvent/Eco-Solvent" },
+};
+/* ซิลค์สกรีน / ดิจิตอล (ตรงกับ index.html) */
+const SCREEN = { plate:250, print:[[500,2.00],[1000,1.80],[5000,1.50],[null,1.20]],
+  mats:{ paper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.003}, pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.004}, pp:{name:"สติ๊กเกอร์ PP",ppc:0.004}, pet:{name:"สติ๊กเกอร์ PET",ppc:0.005}, foil:{name:"สติ๊กเกอร์ฟอยล์",ppc:0.006} } };
+const DIGITAL = { perPiece:[[100,12],[500,8],[1000,5.5],[10000,4]],
+  mats:{ artPaper:{name:"กระดาษอาร์ต",ppc:0.007}, stickerPaper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.010}, pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.014}, pp:{name:"สติ๊กเกอร์ PP",ppc:0.012} } };
+const DPI_LABEL = { "720":"720 dpi (มาตรฐาน)", "1440":"1440 dpi (คมชัดสูง)", "2880":"2880 dpi (ภาพถ่าย)" };
+
+function tierRate(rates,dpi){ if(!rates) return 0; if(rates[dpi]!=null) return rates[dpi]; if(rates["720"]!=null) return rates["720"]; const v=Object.values(rates); return v.length?v[0]:0; }
+function pickTier(tiers,area,dpi){ for(const [max,rates] of tiers){ if(max==null||!isFinite(max)||area<=max) return tierRate(rates,dpi); } return tierRate(tiers[tiers.length-1][1],dpi); }
+function calcInkjet(o){
+  const area=o.wm*o.hm*o.qty; const m=INKJET[o.media];
+  if(!m||m.mode==='quote') return { area, rate:0, base:0, rush:0, total:0, quote:true };
+  let rate, rush=0;
+  if(m.mode==='volume'){ rate=pickTier(m.tiers,area,o.dpi); if(m.rush&&o.rush&&area>=1&&area<50) rush=(o.dpi==='1440'?50:20)*area; }
+  else { rate=o.rush?m.flat.rush:m.flat.normal; }
+  const base=rate*area; return { area, rate, base, rush, total:base+rush, quote:false };
+}
+function tierByQty(tiers,qty){ for(const t of tiers){ const max=t[0]; if(max==null||!isFinite(max)||qty<=max) return t[1]; } return tiers[tiers.length-1][1]; }
+function calcScreen(o){ const area=o.wcm*o.hcm; const plate=SCREEN.plate*o.colors; const per=tierByQty(SCREEN.print,o.qty); const print=per*o.colors*o.qty; const mat=((SCREEN.mats[o.mat]||{}).ppc||0)*area*o.qty; return { area, plate, per, print, mat, total:plate+print+mat }; }
+function calcDigital(o){ const area=o.wcm*o.hcm; const per=tierByQty(DIGITAL.perPiece,o.qty); const print=per*o.qty; const mat=((DIGITAL.mats[o.mat]||{}).ppc||0)*area*o.qty; return { area, per, print, mat, total:print+mat }; }
+function buildInkjetOptions(){ const g={}; for(const k in INKJET){ const m=INKJET[k]; (g[m.cat]=g[m.cat]||[]).push([k,m]); } let h=''; for(const c in g){ h+='<optgroup label="'+c+'">'+g[c].map(([k,m])=>'<option value="'+k+'">'+m.name+(m.mode==='quote'?' — สอบถามราคา':'')+'</option>').join('')+'</optgroup>'; } return h; }
+
 const QTY_PRESET = [100, 250, 500, 1000, 2000, 5000, 10000];
+const QTY_PRESET_BY_SYS = { offset:QTY_PRESET, screen:[100,250,500,1000,2000,5000], digital:[50,100,200,500,1000,2000], inkjet:[1,2,5,10,20,50] };
 const PRESET_SIZES = {
   A2:{label:"A2 (42×59.4 ซม.)",w:42,h:59.4},
   A3:{label:"A3 (29.7×42 ซม.)",w:29.7,h:42}, A4:{label:"A4 (21×29.7 ซม.)",w:21,h:29.7},
@@ -260,6 +365,9 @@ if(typeof localStorage!=='undefined'){
     if(O.papers) for(const k in O.papers) PAPERS[k]=Object.assign(PAPERS[k]||{}, O.papers[k]);      // เพิ่ม/ทับ
     if(O.stickers) for(const k in O.stickers) STICKERS[k]=Object.assign(STICKERS[k]||{}, O.stickers[k]);
     if(O.finishing) for(const k in O.finishing) FINISHING[k]=Object.assign(FINISHING[k]||{}, O.finishing[k]);
+    if(O.inkjet) for(const k in O.inkjet){ INKJET[k]=Object.assign({}, INKJET[k]||{}, O.inkjet[k]); }
+    if(O.screen){ if(typeof O.screen.plate==='number') SCREEN.plate=O.screen.plate; if(Array.isArray(O.screen.print)) SCREEN.print=O.screen.print; if(O.screen.mats) for(const k in O.screen.mats) SCREEN.mats[k]=Object.assign({},SCREEN.mats[k]||{},O.screen.mats[k]); }
+    if(O.digital){ if(Array.isArray(O.digital.perPiece)) DIGITAL.perPiece=O.digital.perPiece; if(O.digital.mats) for(const k in O.digital.mats) DIGITAL.mats[k]=Object.assign({},DIGITAL.mats[k]||{},O.digital.mats[k]); }
   }catch(e){}
 }
 
@@ -320,7 +428,8 @@ function bestQuote(s){
 }
 
 /* ================= state + UI ================= */
-const ST = { step:1, qty:0, docNo:null };
+const ST = { step:1, qty:0, docNo:null, sys:'offset' };
+const SYS_LABEL = { offset:'ออฟเซ็ต', inkjet:'อิงค์เจ็ท', digital:'ดิจิตอล', screen:'ซิลค์สกรีน' };
 const baht = n => "฿" + n.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
 function today(){ const d=new Date(); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+(d.getFullYear()+543); }
 function genDocNo(){
@@ -330,6 +439,51 @@ function genDocNo(){
   return 'QT'+ymd+'-'+String(n).padStart(4,'0');
 }
 const el = id => document.getElementById(id);
+
+/* สลับระบบพิมพ์ (แท็บบาร์) */
+function switchSys(sys){
+  ST.sys = sys; ST.qty = 0;
+  document.querySelectorAll('#systabs button').forEach(b=>b.classList.toggle('active', b.dataset.sys===sys));
+  ['Offset','Inkjet','Digital','Screen'].forEach(s=>{ const p=el('pane'+s); if(p) p.style.display=(s.toLowerCase()===sys)?'block':'none'; });
+  if(el('toStep3')) el('toStep3').disabled=true;
+  if(el('p1title')) el('p1title').textContent = sys==='offset' ? '① เลือกและกำหนดหมวดงานพิมพ์' : ('① เลือกวัสดุและสเปก — '+SYS_LABEL[sys]);
+  if(ST.step!==1) go(1);
+}
+/* ความละเอียดอิงค์เจ็ทตามวัสดุ */
+function onInkjetMedia(){
+  const m = INKJET[el('iMat').value];
+  const opts = (m && m.dpis && m.dpis.length) ? m.dpis : ["720","1440"];
+  el('iDpi').innerHTML = opts.map(d=>'<option value="'+d+'">'+(DPI_LABEL[d]||d+' dpi')+'</option>').join('');
+}
+/* สเปกตามระบบที่เลือก (ยังไม่ใส่ qty) */
+function specFor(){
+  const sys = ST.sys || 'offset';
+  if(sys==='inkjet') return { sys, media:el('iMat').value, dpi:el('iDpi').value, wm:+el('iW').value, hm:+el('iH').value, rush:el('iRush').checked };
+  if(sys==='digital') return { sys, mat:el('dMat').value, wcm:+el('dW').value, hcm:+el('dH').value };
+  if(sys==='screen') return { sys, mat:el('sMat').value, colors:+el('sColors').value, wcm:+el('sW').value, hcm:+el('sH').value };
+  return { sys:'offset', ...specBase() };
+}
+/* คำนวณแบบรวม → { total, unit, quote?, machine?, sheets?, breakdown:[[label,amount]] } */
+function calcFor(base, qty){
+  if(base.sys==='offset'){
+    const r=bestQuote({...base, qty}); if(!r) return null;
+    const bd=[['ค่าเพลท',r.plateCost],['ค่าพิมพ์',r.printCost],['ค่ากระดาษ/วัสดุ',r.matCost]];
+    if(r.finCost>0) bd.push(['ค่าหลังพิมพ์',r.finCost]);
+    return { total:r.total, unit:r.total/qty, machine:(r.plateKey==='cut2'?'ตัด 2 (SM74)':'ตัด 4 (MO)'), method:r.method, sheets:r.sheets, breakdown:bd, r };
+  }
+  if(base.sys==='inkjet'){
+    const r=calcInkjet({media:base.media,dpi:base.dpi,wm:base.wm,hm:base.hm,qty,rush:base.rush});
+    if(r.quote) return { quote:true, area:r.area };
+    const bd=[['ค่าพิมพ์',r.base]]; if(r.rush>0) bd.push(['ค่างานด่วน',r.rush]);
+    return { total:r.total, unit:r.total/qty, area:r.area, rate:r.rate, breakdown:bd };
+  }
+  if(base.sys==='digital'){
+    const r=calcDigital({mat:base.mat,wcm:base.wcm,hcm:base.hcm,qty});
+    return { total:r.total, unit:r.total/qty, breakdown:[['ค่าพิมพ์',r.print],['ค่าวัสดุ',r.mat]] };
+  }
+  const r=calcScreen({mat:base.mat,colors:base.colors,wcm:base.wcm,hcm:base.hcm,qty});
+  return { total:r.total, unit:r.total/qty, breakdown:[['ค่าบล็อก',r.plate],['ค่าพิมพ์',r.print],['ค่าวัสดุ',r.mat]] };
+}
 
 /* สร้างสเปกจากฟอร์มปัจจุบัน (ยังไม่ใส่ qty) */
 function specBase(){
@@ -385,16 +539,22 @@ function onSize(){
 }
 
 function renderQtyTable(){
-  const base = specBase();
-  el('qtyRows').innerHTML = QTY_PRESET.map(q=>{
-    const r = bestQuote({...base, qty:q});
+  const base = specFor();
+  const presets = QTY_PRESET_BY_SYS[base.sys] || QTY_PRESET;
+  el('qtyRows').innerHTML = presets.map(q=>{
+    const r = calcFor(base, q);
     if(!r) return '';
-    const m = r.plateKey==='cut2'?'ตัด 2':'ตัด 4';
+    if(r.quote){
+      return '<tr data-q="'+q+'" onclick="selectQty('+q+')" class="'+(ST.qty===q?'sel':'')+'">'+
+        '<td>'+q.toLocaleString()+'</td><td><span class="tag-machine">สอบถามราคา</span></td>'+
+        '<td colspan="2" style="text-align:right">— ติดต่อฝ่ายขาย —</td></tr>';
+    }
+    const col2 = base.sys==='offset'
+      ? '<span class="tag-machine">'+(r.machine.indexOf('ตัด 2')>=0?'ตัด 2':'ตัด 4')+'</span>'
+      : '<span class="tag-machine">'+SYS_LABEL[base.sys]+'</span>';
     return '<tr data-q="'+q+'" onclick="selectQty('+q+')" class="'+(ST.qty===q?'sel':'')+'">'+
-      '<td>'+q.toLocaleString()+'</td>'+
-      '<td><span class="tag-machine">'+m+'</span></td>'+
-      '<td>'+baht(r.total)+'</td>'+
-      '<td>'+baht(r.total/q)+'</td></tr>';
+      '<td>'+q.toLocaleString()+'</td><td>'+col2+'</td>'+
+      '<td>'+baht(r.total)+'</td><td>'+baht(r.unit)+'</td></tr>';
   }).join('');
 }
 function selectQty(q){ ST.qty=q; el('toStep3').disabled=false; renderQtyTable(); }
@@ -404,46 +564,53 @@ function useCustomQty(){
 }
 
 function renderQuote(){
-  const s = {...specBase(), qty:ST.qty};
-  const r = bestQuote(s);
+  const base = specFor();
+  const q = ST.qty;
+  const r = calcFor(base, q);
   if(!r){ el('quoteArea').innerHTML='<div class="muted">คำนวณไม่ได้ — ตรวจขนาด/จำนวน</div>'; return; }
-  const cat = CAT_LABEL[el('cat').value];
-  const machine = r.plateKey==='cut2'?'ตัด 2 (SM74)':'ตัด 4 (MO)';
-  const sidesTxt = s.back>0 ? ('2 ด้าน · '+METHOD_LABEL[r.method]) : '1 ด้าน';
-  const matName = s.matType==='sticker' ? STICKERS[el('mat').value].name
-                : PAPERS[el('paper').value].name + ' ' + s.gsm + ' แกรม';
-  const finTxt = r.finList.length ? r.finList.map(f=>f.name).join(', ') : '-';
-  const pantone = el('pantone') && el('pantone').checked;
-  const rows = [
-    ['เลขที่เอกสาร', ST.docNo],
-    ['วันที่', today()],
-    ['หมวดงาน', cat],
-    ['วัสดุ/กระดาษ', matName],
-    ['ขนาด', s.wcm+' × '+s.hcm+' ซม.'],
-    ['พิมพ์', sidesTxt+' · สีหน้า '+s.front+' / สีหลัง '+s.back + (pantone?' · มีสีพิเศษ (Pantone)':'')],
-    ['หลังพิมพ์', finTxt],
-    ['จำนวน', s.qty.toLocaleString()+' ชิ้น'],
-    ['เครื่องพิมพ์', machine+' · '+r.sheets.toLocaleString()+' ใบพิมพ์'],
-  ];
+  if(r.quote){
+    el('quoteArea').innerHTML =
+      '<div class="qbox"><b>วัสดุนี้ต้องสอบถามราคากับฝ่ายขาย</b>'+
+      '<div class="muted" style="margin-top:6px">พื้นที่รวมโดยประมาณ '+r.area.toLocaleString('th-TH',{maximumFractionDigits:2})+' ตร.ม.<br>โทร 081-770-7544 · LINE @thaiprint.co.th · sales@thaiprint.co.th</div></div>';
+    ST._lastQuoteText = 'ขอใบเสนอราคา (วัสดุสอบถามราคา): '+INKJET[base.media].name+' — พื้นที่รวม '+r.area.toFixed(2)+' ตร.ม.';
+    return;
+  }
+  const rows = quoteRows(base, r, q);
   el('quoteArea').innerHTML =
     '<div class="qbox"><table>'+rows.map(([k,v])=>'<tr><td class="muted">'+k+'</td><td style="text-align:right">'+v+'</td></tr>').join('')+'</table></div>'+
-    '<table style="margin-top:14px">'+
-    '<tr><td>ค่าเพลท</td><td>'+baht(r.plateCost)+'</td></tr>'+
-    '<tr><td>ค่าพิมพ์</td><td>'+baht(r.printCost)+'</td></tr>'+
-    '<tr><td>ค่ากระดาษ/วัสดุ</td><td>'+baht(r.matCost)+'</td></tr>'+
-    (r.finCost>0?'<tr><td>ค่าหลังพิมพ์</td><td>'+baht(r.finCost)+'</td></tr>':'')+
-    '</table>'+
+    '<table style="margin-top:14px">'+r.breakdown.map(([k,v])=>'<tr><td>'+k+'</td><td>'+baht(v)+'</td></tr>').join('')+'</table>'+
     '<div class="total"><span>ราคารวมโดยประมาณ</span><b>'+baht(r.total)+'</b></div>'+
-    '<div class="muted" style="text-align:right">≈ '+baht(r.total/s.qty)+' /ชิ้น (ยังไม่รวม VAT/ค่าจัดส่ง)</div>';
-  ST._lastQuoteText = quoteText(rows, r, s);
+    '<div class="muted" style="text-align:right">≈ '+baht(r.unit)+' /'+(base.sys==='inkjet'?'ป้าย':'ชิ้น')+' (ยังไม่รวม VAT/ค่าจัดส่ง)</div>';
+  ST._lastQuoteText = quoteTextGeneric(rows, r, base);
 }
-function quoteText(rows, r, s){
+function quoteRows(base, r, q){
+  const common = [['เลขที่เอกสาร', ST.docNo], ['วันที่', today()]];
+  if(base.sys==='offset'){
+    const cat = CAT_LABEL[el('cat').value];
+    const matName = base.matType==='sticker' ? STICKERS[el('mat').value].name : PAPERS[el('paper').value].name+' '+base.gsm+' แกรม';
+    const sidesTxt = base.back>0 ? ('2 ด้าน · '+METHOD_LABEL[r.method]) : '1 ด้าน';
+    const pantone = el('pantone') && el('pantone').checked;
+    return [...common, ['ระบบ','ออฟเซ็ต'], ['หมวดงาน',cat], ['วัสดุ/กระดาษ',matName], ['ขนาด',base.wcm+' × '+base.hcm+' ซม.'],
+      ['พิมพ์', sidesTxt+' · สีหน้า '+base.front+' / สีหลัง '+base.back + (pantone?' · มีสีพิเศษ (Pantone)':'')],
+      ['หลังพิมพ์', r.r.finList.length ? r.r.finList.map(f=>f.name).join(', ') : '-'],
+      ['จำนวน', q.toLocaleString()+' ชิ้น'], ['เครื่องพิมพ์', r.machine+' · '+r.sheets.toLocaleString()+' ใบพิมพ์']];
+  }
+  if(base.sys==='inkjet'){
+    return [...common, ['ระบบ','อิงค์เจ็ท'], ['วัสดุ',INKJET[base.media].name], ['ความละเอียด',(DPI_LABEL[base.dpi]||base.dpi)],
+      ['ขนาด/ชิ้น', base.wm+' × '+base.hm+' ม.'], ['จำนวน', q.toLocaleString()+' ป้าย'],
+      ['พื้นที่รวม', r.area.toLocaleString('th-TH',{maximumFractionDigits:2})+' ตร.ม.'], ['เรต', baht(r.rate)+' /ตร.ม.'+(base.rush?' · งานด่วน':'')]];
+  }
+  if(base.sys==='digital'){
+    return [...common, ['ระบบ','ดิจิตอล'], ['วัสดุ',DIGITAL.mats[base.mat].name], ['ขนาด',base.wcm+' × '+base.hcm+' ซม.'], ['จำนวน',q.toLocaleString()+' ชิ้น']];
+  }
+  return [...common, ['ระบบ','ซิลค์สกรีน'], ['วัสดุ',SCREEN.mats[base.mat].name], ['จำนวนสี',base.colors], ['ขนาด',base.wcm+' × '+base.hcm+' ซม.'], ['จำนวน',q.toLocaleString()+' ชิ้น']];
+}
+function quoteTextGeneric(rows, r, base){
   let t = "ใบเสนอราคา — Thai Print Inter Group\n";
   const job=el('jobName').value; if(job) t+="งาน: "+job+"\n";
   rows.forEach(([k,v])=>t+= k+": "+v+"\n");
-  t+="ค่าเพลท: "+baht(r.plateCost)+"\nค่าพิมพ์: "+baht(r.printCost)+"\nค่ากระดาษ/วัสดุ: "+baht(r.matCost)+"\n";
-  if(r.finCost>0) t+="ค่าหลังพิมพ์: "+baht(r.finCost)+"\n";
-  t+="รวมโดยประมาณ: "+baht(r.total)+" (≈ "+baht(r.total/s.qty)+"/ชิ้น)\n";
+  r.breakdown.forEach(([k,v])=>t+= k+": "+baht(v)+"\n");
+  t+="รวมโดยประมาณ: "+baht(r.total)+" (≈ "+baht(r.unit)+"/"+(base.sys==='inkjet'?'ป้าย':'ชิ้น')+")\n";
   const nm=el('cName').value, ph=el('cPhone').value;
   if(nm||ph) t+="ผู้ติดต่อ: "+nm+" "+ph+"\n";
   return t;
@@ -473,10 +640,17 @@ if(typeof document!=='undefined') (function init(){
   el('size').innerHTML = Object.entries(PRESET_SIZES).map(([k,v])=>'<option value="'+k+'">'+v.label+'</option>').join('');
   el('finBox').innerHTML = Object.entries(FINISHING).map(([k,v])=>
     '<label><input type="checkbox" value="'+k+'"> '+v.name+'</label>').join('');
-  // ?cat= preselect
+  // วัสดุระบบอื่น
+  el('iMat').innerHTML = buildInkjetOptions(); onInkjetMedia();
+  el('sMat').innerHTML = Object.entries(SCREEN.mats).map(([k,v])=>'<option value="'+k+'">'+v.name+'</option>').join('');
+  el('dMat').innerHTML = Object.entries(DIGITAL.mats).map(([k,v])=>'<option value="'+k+'">'+v.name+'</option>').join('');
+  // ?cat= preselect (ระบบออฟเซ็ต)
   const q = new URLSearchParams(location.search).get('cat');
   if(q && CAT_LABEL[q]) el('cat').value = q;
   onCat();
+  // ?sys= preselect ระบบพิมพ์
+  const qs = new URLSearchParams(location.search).get('sys');
+  switchSys(qs && SYS_LABEL[qs] ? qs : 'offset');
   renderStepbar();
 })();
 
