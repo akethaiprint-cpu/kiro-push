@@ -151,14 +151,21 @@
         </div>
       </div>
 
-      <!-- DIGITAL pane -->
+      <!-- DIGITAL pane (Fujifilm SC180 — cost mode) -->
       <div id="paneDigital" style="display:none">
         <div class="grid">
-          <div class="lbl">วัสดุ <span class="req">*</span></div>
+          <div class="lbl">กระดาษ <span class="req">*</span></div>
           <select id="dMat"></select>
+          <div class="lbl">แกรม (52–400) <span class="req">*</span></div>
+          <input id="dGsm" type="number" value="157" min="52" max="400">
           <div class="lbl">ขนาด (ซม.) <span class="req">*</span></div>
           <div class="two"><input id="dW" type="number" step="0.1" value="9" placeholder="กว้าง (ซม.)"><input id="dH" type="number" step="0.1" value="5.4" placeholder="สูง (ซม.)"></div>
+          <div class="lbl">พิมพ์</div>
+          <select id="dSides"><option value="1">หน้าเดียว</option><option value="2">สองหน้า</option></select>
+          <div class="lbl">หมึกพิเศษ (สถานี)</div>
+          <input id="dSpecial" type="number" value="0" min="0" max="4">
         </div>
+        <p class="muted" style="margin-top:8px">Fujifilm Revoria SC180 · CMYK · SRA3 (สูงสุด 33×48.8 ซม.) · หมึกพิเศษส่งเครื่อง PC series</p>
       </div>
 
       <!-- SCREEN pane -->
@@ -313,8 +320,8 @@ const INKJET = {
 /* ซิลค์สกรีน / ดิจิตอล (ตรงกับ index.html) */
 const SCREEN = { plate:250, print:[[500,2.00],[1000,1.80],[5000,1.50],[null,1.20]],
   mats:{ paper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.003}, pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.004}, pp:{name:"สติ๊กเกอร์ PP",ppc:0.004}, pet:{name:"สติ๊กเกอร์ PET",ppc:0.005}, foil:{name:"สติ๊กเกอร์ฟอยล์",ppc:0.006} } };
-const DIGITAL = { perPiece:[[100,12],[500,8],[1000,5.5],[10000,4]],
-  mats:{ artPaper:{name:"กระดาษอาร์ต",ppc:0.007}, stickerPaper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.010}, pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.014}, pp:{name:"สติ๊กเกอร์ PP",ppc:0.012} } };
+const DIGITAL = { clickCMYK:6, clickSpecial:4, wastePct:0.08, profitPct:0.40, setup:150, sheetW:32, sheetH:47,
+  mats:{ artGlossy:{name:"อาร์ตมัน",pricePerKg:32}, artMatte:{name:"อาร์ตด้าน",pricePerKg:32}, artCard:{name:"อาร์ตการ์ด",pricePerKg:34}, ivory:{name:"อาร์ตการ์ด 1 หน้า (ไอวอรี่)",pricePerKg:32}, bond:{name:"กระดาษปอนด์",pricePerKg:30}, kraft:{name:"คราฟท์",pricePerKg:40} } };
 const DPI_LABEL = { "720":"720 dpi (มาตรฐาน)", "1440":"1440 dpi (คมชัดสูง)", "2880":"2880 dpi (ภาพถ่าย)" };
 
 function tierRate(rates,dpi){ if(!rates) return 0; if(rates[dpi]!=null) return rates[dpi]; if(rates["720"]!=null) return rates["720"]; const v=Object.values(rates); return v.length?v[0]:0; }
@@ -329,7 +336,17 @@ function calcInkjet(o){
 }
 function tierByQty(tiers,qty){ for(const t of tiers){ const max=t[0]; if(max==null||!isFinite(max)||qty<=max) return t[1]; } return tiers[tiers.length-1][1]; }
 function calcScreen(o){ const area=o.wcm*o.hcm; const plate=SCREEN.plate*o.colors; const per=tierByQty(SCREEN.print,o.qty); const print=per*o.colors*o.qty; const mat=((SCREEN.mats[o.mat]||{}).ppc||0)*area*o.qty; return { area, plate, per, print, mat, total:plate+print+mat }; }
-function calcDigital(o){ const area=o.wcm*o.hcm; const per=tierByQty(DIGITAL.perPiece,o.qty); const print=per*o.qty; const mat=((DIGITAL.mats[o.mat]||{}).ppc||0)*area*o.qty; return { area, per, print, mat, total:print+mat }; }
+function digitalNup(wcm,hcm){ const W=DIGITAL.sheetW,H=DIGITAL.sheetH,fw=wcm+0.4,fh=hcm+0.4; const a=Math.floor(W/fw)*Math.floor(H/fh),b=Math.floor(W/fh)*Math.floor(H/fw); return Math.max(a,b); }
+function calcDigital(o){
+  const nUp=digitalNup(o.wcm,o.hcm); if(!isFinite(nUp)||nUp<=0) return { error:true, nUp:0 };
+  const pages=o.sides===2?2:1;
+  const sheets=Math.ceil(Math.ceil(o.qty/nUp)*(1+DIGITAL.wastePct));
+  const click=sheets*pages*(DIGITAL.clickCMYK+(o.special||0)*DIGITAL.clickSpecial);
+  const mt=DIGITAL.mats[o.matKey]||{pricePerKg:32};
+  const paper=sheets*(DIGITAL.sheetW*DIGITAL.sheetH*o.gsm/1e7*mt.pricePerKg);
+  const cost=paper+click+DIGITAL.setup;
+  return { nUp, sheets, pages, paper, click, setup:DIGITAL.setup, cost, total:cost*(1+DIGITAL.profitPct) };
+}
 function buildInkjetOptions(){ const g={}; for(const k in INKJET){ const m=INKJET[k]; (g[m.cat]=g[m.cat]||[]).push([k,m]); } let h=''; for(const c in g){ h+='<optgroup label="'+c+'">'+g[c].map(([k,m])=>'<option value="'+k+'">'+m.name+(m.mode==='quote'?' — สอบถามราคา':'')+'</option>').join('')+'</optgroup>'; } return h; }
 
 const QTY_PRESET = [100, 250, 500, 1000, 2000, 5000, 10000];
@@ -367,7 +384,7 @@ if(typeof localStorage!=='undefined'){
     if(O.finishing) for(const k in O.finishing) FINISHING[k]=Object.assign(FINISHING[k]||{}, O.finishing[k]);
     if(O.inkjet) for(const k in O.inkjet){ INKJET[k]=Object.assign({}, INKJET[k]||{}, O.inkjet[k]); }
     if(O.screen){ if(typeof O.screen.plate==='number') SCREEN.plate=O.screen.plate; if(Array.isArray(O.screen.print)) SCREEN.print=O.screen.print; if(O.screen.mats) for(const k in O.screen.mats) SCREEN.mats[k]=Object.assign({},SCREEN.mats[k]||{},O.screen.mats[k]); }
-    if(O.digital){ if(Array.isArray(O.digital.perPiece)) DIGITAL.perPiece=O.digital.perPiece; if(O.digital.mats) for(const k in O.digital.mats) DIGITAL.mats[k]=Object.assign({},DIGITAL.mats[k]||{},O.digital.mats[k]); }
+    if(O.digital){ for(const key of ['clickCMYK','clickSpecial','wastePct','profitPct','setup','sheetW','sheetH']) if(typeof O.digital[key]==='number') DIGITAL[key]=O.digital[key]; if(O.digital.mats) for(const k in O.digital.mats) DIGITAL.mats[k]=Object.assign({},DIGITAL.mats[k]||{},O.digital.mats[k]); }
   }catch(e){}
 }
 
@@ -459,7 +476,7 @@ function onInkjetMedia(){
 function specFor(){
   const sys = ST.sys || 'offset';
   if(sys==='inkjet') return { sys, media:el('iMat').value, dpi:el('iDpi').value, wm:+el('iW').value, hm:+el('iH').value, rush:el('iRush').checked };
-  if(sys==='digital') return { sys, mat:el('dMat').value, wcm:+el('dW').value, hcm:+el('dH').value };
+  if(sys==='digital') return { sys, matKey:el('dMat').value, gsm:+el('dGsm').value, wcm:+el('dW').value, hcm:+el('dH').value, sides:+el('dSides').value, special:+el('dSpecial').value };
   if(sys==='screen') return { sys, mat:el('sMat').value, colors:+el('sColors').value, wcm:+el('sW').value, hcm:+el('sH').value };
   return { sys:'offset', ...specBase() };
 }
@@ -478,8 +495,9 @@ function calcFor(base, qty){
     return { total:r.total, unit:r.total/qty, area:r.area, rate:r.rate, breakdown:bd };
   }
   if(base.sys==='digital'){
-    const r=calcDigital({mat:base.mat,wcm:base.wcm,hcm:base.hcm,qty});
-    return { total:r.total, unit:r.total/qty, breakdown:[['ค่าพิมพ์',r.print],['ค่าวัสดุ',r.mat]] };
+    const r=calcDigital({matKey:base.matKey,gsm:base.gsm,wcm:base.wcm,hcm:base.hcm,sides:base.sides,special:base.special,qty});
+    if(r.error) return null;
+    return { total:r.total, unit:r.total/qty, sheets:r.sheets, nUp:r.nUp, pages:r.pages, breakdown:[['ค่ากระดาษ',r.paper],['ค่าคลิก',r.click],['ค่าเซ็ตงาน',r.setup]] };
   }
   const r=calcScreen({mat:base.mat,colors:base.colors,wcm:base.wcm,hcm:base.hcm,qty});
   return { total:r.total, unit:r.total/qty, breakdown:[['ค่าบล็อก',r.plate],['ค่าพิมพ์',r.print],['ค่าวัสดุ',r.mat]] };
@@ -601,7 +619,9 @@ function quoteRows(base, r, q){
       ['พื้นที่รวม', r.area.toLocaleString('th-TH',{maximumFractionDigits:2})+' ตร.ม.'], ['เรต', baht(r.rate)+' /ตร.ม.'+(base.rush?' · งานด่วน':'')]];
   }
   if(base.sys==='digital'){
-    return [...common, ['ระบบ','ดิจิตอล'], ['วัสดุ',DIGITAL.mats[base.mat].name], ['ขนาด',base.wcm+' × '+base.hcm+' ซม.'], ['จำนวน',q.toLocaleString()+' ชิ้น']];
+    return [...common, ['ระบบ','ดิจิตอล (Fujifilm SC180)'], ['กระดาษ',DIGITAL.mats[base.matKey].name+' '+base.gsm+' แกรม'], ['ขนาด',base.wcm+' × '+base.hcm+' ซม.'],
+      ['พิมพ์', (base.sides===2?'2 หน้า':'1 หน้า')+(base.special>0?' · หมึกพิเศษ '+base.special+' สถานี':'')],
+      ['จำนวน',q.toLocaleString()+' ชิ้น'], ['แผ่นพิมพ์', r.sheets.toLocaleString()+' แผ่น SRA3 (วาง '+r.nUp+'/แผ่น)']];
   }
   return [...common, ['ระบบ','ซิลค์สกรีน'], ['วัสดุ',SCREEN.mats[base.mat].name], ['จำนวนสี',base.colors], ['ขนาด',base.wcm+' × '+base.hcm+' ซม.'], ['จำนวน',q.toLocaleString()+' ชิ้น']];
 }

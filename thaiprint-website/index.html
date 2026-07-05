@@ -246,19 +246,24 @@
         <div class="result empty" id="iResult">กรอกข้อมูลแล้วกด “คำนวณราคา”</div>
       </div>
 
-      <!-- Digital -->
+      <!-- Digital (Fujifilm SC180 — cost mode) -->
       <div class="calc-body" id="bodyDigital" style="display:none">
         <div class="row2">
-          <div class="field"><label>วัสดุ <span class="req">*</span></label><select id="dMat"></select></div>
+          <div class="field"><label>กระดาษ <span class="req">*</span></label><select id="dMat"></select></div>
+          <div class="field"><label>แกรม (52–400) <span class="req">*</span></label><input id="dGsm" type="number" value="157" min="52" max="400"></div>
+        </div>
+        <div class="row3">
+          <div class="field"><label>กว้าง (ซม.) <span class="req">*</span></label><input id="dW" type="number" value="9" min="1" step="0.1"></div>
+          <div class="field"><label>สูง (ซม.) <span class="req">*</span></label><input id="dH" type="number" value="5.4" min="1" step="0.1"></div>
           <div class="field"><label>จำนวน (ชิ้น) <span class="req">*</span></label><input id="dQty" type="number" value="200" min="1"></div>
         </div>
         <div class="row2">
-          <div class="field"><label>กว้าง (ซม.) <span class="req">*</span></label><input id="dW" type="number" value="9" min="1" step="0.1"></div>
-          <div class="field"><label>สูง (ซม.) <span class="req">*</span></label><input id="dH" type="number" value="5.4" min="1" step="0.1"></div>
+          <div class="field"><label>พิมพ์</label><select id="dSides"><option value="1">หน้าเดียว</option><option value="2">สองหน้า</option></select></div>
+          <div class="field"><label>หมึกพิเศษ (สถานี PC series)</label><input id="dSpecial" type="number" value="0" min="0" max="4"></div>
         </div>
         <button class="btn btn-orange" style="width:100%" onclick="runDigital()">คำนวณราคา</button>
         <div class="result empty" id="dResult">กรอกข้อมูลแล้วกด “คำนวณราคา”</div>
-        <div class="hint" style="margin-top:8px">ดิจิตอลพิมพ์เร็ว จำนวนน้อย ไม่มีค่าเพลท — เหมาะกับสติ๊กเกอร์/ฉลาก/นามบัตรจำนวนไม่มาก</div>
+        <div class="hint" style="margin-top:8px">Fujifilm Revoria SC180 · CMYK · SRA3 (สูงสุด 33×48.8 ซม.) · หมึกพิเศษ (ทอง/เงิน/ขาว) ส่งเครื่อง PC series</div>
       </div>
 
       <!-- Silkscreen -->
@@ -435,12 +440,16 @@ const SCREEN = {
     foil:{name:"สติ๊กเกอร์ฟอยล์",ppc:0.006},
   },
 };
-/* ===== ดิจิตอล (Digital) — ราคา/ชิ้น (tier ตามจำนวน) + วัสดุ ppc; ไม่มีค่าเพลท ===== */
+/* ===== ดิจิตอล (Fujifilm Revoria SC180) — โหมดต้นทุนละเอียด =====
+   วางต่อแผ่น SRA3 → ค่ากระดาษ + ค่าคลิก(+หมึกพิเศษ) + ตกแต่ง + เซ็ตงาน → ×(1+กำไร)
+   ค่าเริ่มต้นจากสกิล: คลิก CMYK 6 บ./หน้า, หมึกพิเศษ +4 บ./สถานี, เผื่อเสีย 8%, กำไร 40%, เซ็ตงาน 150 */
 const DIGITAL = {
-  perPiece: [[100,12],[500,8],[1000,5.5],[10000,4]], // [maxจำนวน, บ./ชิ้น]
-  mats: {
-    artPaper:{name:"กระดาษอาร์ต",ppc:0.007}, stickerPaper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.010},
-    pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.014}, pp:{name:"สติ๊กเกอร์ PP",ppc:0.012},
+  clickCMYK: 6, clickSpecial: 4, wastePct: 0.08, profitPct: 0.40, setup: 150,
+  sheetW: 32, sheetH: 47,  // พื้นที่ใช้งาน SRA3 (ซม.) ~33×48.8
+  mats: {  // ต้นทุนกระดาษ บ./กก. (ราคาจริงจากเว็บ)
+    artGlossy:{name:"อาร์ตมัน",pricePerKg:32}, artMatte:{name:"อาร์ตด้าน",pricePerKg:32},
+    artCard:{name:"อาร์ตการ์ด",pricePerKg:34}, ivory:{name:"อาร์ตการ์ด 1 หน้า (ไอวอรี่)",pricePerKg:32},
+    bond:{name:"กระดาษปอนด์",pricePerKg:30}, kraft:{name:"คราฟท์",pricePerKg:40},
   },
 };
 
@@ -468,7 +477,7 @@ if(typeof localStorage!=='undefined'){
       if(O.screen.mats) for(const k in O.screen.mats) SCREEN.mats[k]=Object.assign({},SCREEN.mats[k]||{},O.screen.mats[k]);
     }
     if(O.digital){
-      if(Array.isArray(O.digital.perPiece)) DIGITAL.perPiece=O.digital.perPiece;
+      for(const key of ['clickCMYK','clickSpecial','wastePct','profitPct','setup','sheetW','sheetH']) if(typeof O.digital[key]==='number') DIGITAL[key]=O.digital[key];
       if(O.digital.mats) for(const k in O.digital.mats) DIGITAL.mats[k]=Object.assign({},DIGITAL.mats[k]||{},O.digital.mats[k]);
     }
   }catch(e){}
@@ -532,13 +541,26 @@ function calcScreen(o){
   const mat=((SCREEN.mats[o.mat]||{}).ppc||0)*area*o.qty;
   return { area, plate, per, print, mat, total: plate+print+mat };
 }
-/* ดิจิตอล: ราคา/ชิ้น×จำนวน + วัสดุ×พื้นที่×จำนวน (ไม่มีค่าเพลท) */
+/* วางชิ้นงานต่อแผ่น SRA3 (ทั้ง 2 แนว) */
+function digitalNup(wcm,hcm){
+  const W=DIGITAL.sheetW, H=DIGITAL.sheetH, fw=wcm+0.4, fh=hcm+0.4;
+  const a=Math.floor(W/fw)*Math.floor(H/fh), b=Math.floor(W/fh)*Math.floor(H/fw);
+  return Math.max(a,b);
+}
+/* ดิจิตอล SC180 โหมดต้นทุน: กระดาษ + คลิก + ตกแต่ง + เซ็ตงาน → ×(1+กำไร) */
 function calcDigital(o){
-  const area=o.wcm*o.hcm;
-  const per=tierByQty(DIGITAL.perPiece,o.qty);
-  const print=per*o.qty;
-  const mat=((DIGITAL.mats[o.mat]||{}).ppc||0)*area*o.qty;
-  return { area, per, print, mat, total: print+mat };
+  const nUp=digitalNup(o.wcm,o.hcm);
+  if(!isFinite(nUp)||nUp<=0) return { error:true, nUp:0 };
+  const pages = o.sides===2 ? 2 : 1;
+  const minSheets = Math.ceil(o.qty/nUp);
+  const sheets = Math.ceil(minSheets*(1+DIGITAL.wastePct));
+  const click = sheets*pages*(DIGITAL.clickCMYK + (o.special||0)*DIGITAL.clickSpecial);
+  const mt = DIGITAL.mats[o.matKey] || {pricePerKg:32};
+  const paper = sheets * (DIGITAL.sheetW*DIGITAL.sheetH * o.gsm/1e7 * mt.pricePerKg);
+  let fin=0; (o.finishing||[]).forEach(k=>{ const f=FINISHING[k]; if(!f) return; let c=f.perPiece!==undefined?f.perPiece*o.qty:f.perSheet*sheets; c=Math.max(c,f.min||0); fin+=c; });
+  const cost = paper + click + fin + DIGITAL.setup;
+  const total = cost*(1+DIGITAL.profitPct);
+  return { nUp, sheets, pages, paper, click, fin, setup:DIGITAL.setup, cost, total };
 }
 
 /* ===== UI ===== */
@@ -634,15 +656,19 @@ function runScreen(){
 
 function runDigital(){
   const qty=+document.getElementById('dQty').value;
-  const r=calcDigital({ mat:document.getElementById('dMat').value,
-    wcm:+document.getElementById('dW').value, hcm:+document.getElementById('dH').value, qty:qty });
+  const r=calcDigital({ matKey:document.getElementById('dMat').value, gsm:+document.getElementById('dGsm').value,
+    wcm:+document.getElementById('dW').value, hcm:+document.getElementById('dH').value,
+    sides:+document.getElementById('dSides').value, special:+document.getElementById('dSpecial').value, qty:qty, finishing:[] });
   const el=document.getElementById('dResult'); el.classList.remove('empty');
-  el.innerHTML='<table><tr><td>พื้นที่/ชิ้น</td><td>'+r.area.toLocaleString('th-TH',{maximumFractionDigits:2})+' ตร.ซม.</td></tr>'+
-    '<tr><td>ราคาพิมพ์/ชิ้น</td><td>'+baht(r.per)+'</td></tr>'+
-    '<tr><td>ค่าพิมพ์</td><td>'+baht(r.print)+'</td></tr>'+
-    '<tr><td>ค่าวัสดุ</td><td>'+baht(r.mat)+'</td></tr></table>'+
+  if(r.error){ el.innerHTML='<span style="color:#c0392b">ชิ้นงานใหญ่เกินแผ่น SRA3 (33×48.8 ซม.) — แนะนำระบบออฟเซ็ต/อิงค์เจ็ท</span>'; return; }
+  el.innerHTML='<table>'+
+    '<tr><td>วางต่อแผ่น SRA3</td><td>'+r.nUp+' ชิ้น/แผ่น</td></tr>'+
+    '<tr><td>แผ่นพิมพ์ (รวมเผื่อเสีย)</td><td>'+r.sheets.toLocaleString()+' แผ่น</td></tr>'+
+    '<tr><td>ค่ากระดาษ</td><td>'+baht(r.paper)+'</td></tr>'+
+    '<tr><td>ค่าคลิก (พิมพ์'+(r.pages===2?' 2 หน้า':'')+')</td><td>'+baht(r.click)+'</td></tr>'+
+    '<tr><td>ค่าเซ็ตงาน</td><td>'+baht(r.setup)+'</td></tr></table>'+
     '<div class="total"><span>ราคารวมโดยประมาณ</span><b>'+baht(r.total)+'</b></div>'+
-    '<div class="hint" style="text-align:right">≈ '+baht(r.total/qty)+' /ชิ้น</div>';
+    '<div class="hint" style="text-align:right">≈ '+baht(r.total/qty)+' /ชิ้น (รวมกำไร '+Math.round(DIGITAL.profitPct*100)+'%)</div>';
 }
 
 /* render arrays (เฉพาะบนเบราว์เซอร์ — ข้ามตอนรันเทสต์ใน node) */

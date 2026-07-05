@@ -161,11 +161,12 @@ const DEFAULTS = {
     mats:{ paper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.003}, pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.004},
       pp:{name:"สติ๊กเกอร์ PP",ppc:0.004}, pet:{name:"สติ๊กเกอร์ PET",ppc:0.005}, foil:{name:"สติ๊กเกอร์ฟอยล์",ppc:0.006} },
   },
-  // ดิจิตอล (ต้องตรงกับ DIGITAL ใน index.html)
+  // ดิจิตอล Fujifilm SC180 โหมดต้นทุน (ต้องตรงกับ DIGITAL ใน index.html)
   digital:{
-    perPiece:[[100,12],[500,8],[1000,5.5],[10000,4]],
-    mats:{ artPaper:{name:"กระดาษอาร์ต",ppc:0.007}, stickerPaper:{name:"สติ๊กเกอร์กระดาษ",ppc:0.010},
-      pvc:{name:"สติ๊กเกอร์ PVC",ppc:0.014}, pp:{name:"สติ๊กเกอร์ PP",ppc:0.012} },
+    clickCMYK:6, clickSpecial:4, wastePct:0.08, profitPct:0.40, setup:150, sheetW:32, sheetH:47,
+    mats:{ artGlossy:{name:"อาร์ตมัน",pricePerKg:32}, artMatte:{name:"อาร์ตด้าน",pricePerKg:32},
+      artCard:{name:"อาร์ตการ์ด",pricePerKg:34}, ivory:{name:"อาร์ตการ์ด 1 หน้า (ไอวอรี่)",pricePerKg:32},
+      bond:{name:"กระดาษปอนด์",pricePerKg:30}, kraft:{name:"คราฟท์",pricePerKg:40} },
   },
 };
 
@@ -210,7 +211,7 @@ function addItem(cat){
   if(cat==='finishing')data.finishing[key]= { name:'งานหลังพิมพ์ใหม่', perPiece:0.10, min:200 };
   if(cat==='inkjet')   data.inkjet[key]   = { name:'วัสดุอิงค์เจ็ทใหม่', cat:'อื่นๆ', mode:'flat', dpis:['720','1440'], ink:'', flat:{normal:0,rush:0} };
   if(cat==='screenMat')  data.screen.mats[key]  = { name:'วัสดุใหม่', ppc:0.004 };
-  if(cat==='digitalMat') data.digital.mats[key] = { name:'วัสดุใหม่', ppc:0.008 };
+  if(cat==='digitalMat') data.digital.mats[key] = { name:'กระดาษใหม่', pricePerKg:32 };
   render();
 }
 /* เปลี่ยนโหมดราคาอิงค์เจ็ท → เตรียมโครงสร้างราคาให้ตรงโหมด แล้ว render ใหม่ */
@@ -328,15 +329,18 @@ function render(){
     h+='</div>';
   }
 
-  // ดิจิตอล
+  // ดิจิตอล (Fujifilm SC180 — โหมดต้นทุน)
   if(data.digital){
-    h+='<div class="card"><h3>ดิจิตอล — ราคา/ชิ้น + วัสดุ <span style="font-size:12px;color:var(--muted)">(ไม่มีค่าเพลท)</span></h3>';
-    h+='<div class="colh">ราคาพิมพ์/ชิ้น ตามช่วงจำนวน (≤จำนวน | บ.)</div>';
-    (data.digital.perPiece||[]).forEach((t,i)=>{ h+='<div class="row">'+MAXN('digital.perPiece.'+i+'.0',t[0])+N('digital.perPiece.'+i+'.1',t[1])+'<div></div></div>'; });
-    h+='<div class="colh">วัสดุ (ชื่อ | บ./ตร.ซม. | ลบ)</div>';
+    h+='<div class="card"><h3>ดิจิตอล (Fujifilm SC180) — โหมดต้นทุนละเอียด</h3>';
+    h+='<div class="row"><div class="nm">ค่าคลิก CMYK (บ./หน้า SRA3)</div>'+N('digital.clickCMYK',data.digital.clickCMYK)+'<div></div></div>';
+    h+='<div class="row"><div class="nm">หมึกพิเศษ (บ./สถานี/หน้า)</div>'+N('digital.clickSpecial',data.digital.clickSpecial)+'<div></div></div>';
+    h+='<div class="row"><div class="nm">เผื่อเสีย (สัดส่วน เช่น 0.08)</div>'+N('digital.wastePct',data.digital.wastePct)+'<div></div></div>';
+    h+='<div class="row"><div class="nm">กำไร (สัดส่วน เช่น 0.40)</div>'+N('digital.profitPct',data.digital.profitPct)+'<div></div></div>';
+    h+='<div class="row"><div class="nm">ค่าเซ็ตงาน (บ.)</div>'+N('digital.setup',data.digital.setup)+'<div></div></div>';
+    h+='<div class="colh">กระดาษ (ชื่อ | ต้นทุน บ./กก. | ลบ)</div>';
     for(const k in data.digital.mats){ const mt=data.digital.mats[k];
-      h+='<div class="irow">'+T('digital.mats.'+k+'.name',mt.name)+N('digital.mats.'+k+'.ppc',mt.ppc)+'<div></div>'+delMatBtn('digital',k)+'</div>'; }
-    h+='<button class="btn btn-ghost addbtn" onclick="addItem(\'digitalMat\')">+ เพิ่มวัสดุดิจิตอล</button>';
+      h+='<div class="irow">'+T('digital.mats.'+k+'.name',mt.name)+N('digital.mats.'+k+'.pricePerKg',mt.pricePerKg)+'<div></div>'+delMatBtn('digital',k)+'</div>'; }
+    h+='<button class="btn btn-ghost addbtn" onclick="addItem(\'digitalMat\')">+ เพิ่มกระดาษดิจิตอล</button>';
     h+='</div>';
   }
 
