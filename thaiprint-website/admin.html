@@ -158,7 +158,10 @@ const DEFAULTS = {
 
 let data = load();
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
-function load(){ const d=clone(DEFAULTS); try{ merge(d, JSON.parse(localStorage.getItem('tp_priceTable')||'{}')); }catch(e){} return d; }
+function load(){ const d=clone(DEFAULTS); try{ merge(d, JSON.parse(localStorage.getItem('tp_priceTable')||'{}')); }catch(e){}
+  /* ลบคีย์รูปแบบเก่าที่ไม่ใช้แล้ว (ย้ายมาเป็น d.inkjet) กันบันทึกซ้ำ */
+  delete d.vinyl; delete d.stpvc; delete d.flat;
+  return d; }
 function merge(d,s){ for(const k in s){ if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])){ d[k]=d[k]||{}; merge(d[k],s[k]); } else d[k]=s[k]; } }
 
 /* ===== PIN ===== */

@@ -401,11 +401,15 @@ if(typeof localStorage!=='undefined'){
       if(typeof s.plate==='number') PRINT_COST[p].plate=s.plate;
       for(const ink of ['conventional','uv']) if(s[ink]) Object.assign(PRINT_COST[p][ink], s[ink]); }
     if(O.stickers) for(const k in O.stickers) STICKERS[k]=Object.assign(STICKERS[k]||{}, O.stickers[k]);
-    if(O.inkjet) for(const k in O.inkjet){ INKJET[k] = Object.assign({}, INKJET[k]||{}, O.inkjet[k]); }
-    /* รองรับรูปแบบเก่า (vinyl/stpvc/flat) ที่เคยเซฟไว้ */
-    if(Array.isArray(O.vinyl) && INKJET.vinyl) INKJET.vinyl.tiers = O.vinyl.map(t=>[(t[0]==null||!isFinite(t[0]))?null:t[0], {"720":t[1],"1440":t[2]}]);
-    if(Array.isArray(O.stpvc) && INKJET.stpvc) INKJET.stpvc.tiers = O.stpvc.map(t=>[(t[0]==null||!isFinite(t[0]))?null:t[0], {"720":t[1],"1440":t[2]}]);
-    if(O.flat) for(const k in O.flat){ if(INKJET[k] && INKJET[k].mode==='flat') INKJET[k].flat = Object.assign({}, INKJET[k].flat, O.flat[k]); }
+    if(O.inkjet){
+      /* รูปแบบใหม่ (รีจิสทรี) — ให้ค่าที่เซฟจาก admin ใหม่มีผลก่อนเสมอ */
+      for(const k in O.inkjet){ INKJET[k] = Object.assign({}, INKJET[k]||{}, O.inkjet[k]); }
+    } else {
+      /* รองรับรูปแบบเก่า (vinyl/stpvc/flat) เฉพาะกรณียังไม่เคยเซฟรูปแบบใหม่ */
+      if(Array.isArray(O.vinyl) && INKJET.vinyl) INKJET.vinyl.tiers = O.vinyl.map(t=>[(t[0]==null||!isFinite(t[0]))?null:t[0], {"720":t[1],"1440":t[2]}]);
+      if(Array.isArray(O.stpvc) && INKJET.stpvc) INKJET.stpvc.tiers = O.stpvc.map(t=>[(t[0]==null||!isFinite(t[0]))?null:t[0], {"720":t[1],"1440":t[2]}]);
+      if(O.flat) for(const k in O.flat){ if(INKJET[k] && INKJET[k].mode==='flat') INKJET[k].flat = Object.assign({}, INKJET[k].flat, O.flat[k]); }
+    }
   }catch(e){}
 }
 
